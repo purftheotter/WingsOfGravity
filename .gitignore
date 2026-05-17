@@ -1,0 +1,5 @@
+target/
+
+# optional editor junk
+.DS_Store
+*.swp
