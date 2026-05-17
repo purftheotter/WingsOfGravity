@@ -1,4 +1,5 @@
-use sdl2::image;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use sdl2::keyboard::Scancode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -44,12 +45,11 @@ impl Game {
             .set_logical_size(screen_width, screen_height)
             .unwrap();
 
-        let screen_area = Rect::new(0, 0, screen_width, screen_height);
         let clear_color = Color::RGB(64, 192, 255);
         canvas.set_draw_color(clear_color);
 
         //Event pump
-        let mut event_pump = sdl_context.event_pump().unwrap();
+        let event_pump = sdl_context.event_pump().unwrap();
 
         //Player
         let mut player = Fighter::new(
@@ -134,6 +134,18 @@ impl Game {
         {
             self.player.transform.rotation += self.player.turn_rate.speed * dt;
         }
+
+        for event in self.event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. } => self.running = false,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => self.running = false,
+
+                _ => {}
+            }
+        }
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -147,7 +159,9 @@ impl Game {
             .canvas
             .fill_rect(Rect::new(0, 0, self.screen_width, self.screen_height));
 
-        self.player.render(&mut self.canvas, assets);
+        self.player
+            .render(&mut self.canvas, assets)
+            .expect("Player Render Failed");
 
         self.canvas.present();
     }
