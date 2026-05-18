@@ -1,3 +1,4 @@
+pub mod primitives;
 pub mod speeds;
 pub mod sprite;
 pub mod transform;
