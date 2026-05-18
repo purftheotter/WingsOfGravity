@@ -9,7 +9,7 @@ pub fn subtract(v1: &Vec2, v2: &Vec2) -> Vec2 {
 
 pub fn normal(v1: &Vec2, v2: &Vec2) -> Vec2 {
     Vec2 {
-        x: (-(subtract(v1, v2).x)),
-        y: (subtract(v1, v2).y),
+        x: (-(subtract(v1, v2).y)),
+        y: (subtract(v1, v2).x),
     }
 }
