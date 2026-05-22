@@ -10,9 +10,12 @@ use std::time::Instant;
 
 use crate::entities::ships::Fighter;
 use crate::rendering::assets::Assets;
+use crate::rendering::debug_render::render_polygon;
 use crate::systems::movement::apply_velocity;
 use crate::systems::movement::rotated_velocity;
 use crate::traits::renderable::Renderable;
+use crate::math::vec2math::Vec2;
+use crate::math::shapes::Polygon;
 
 pub struct Game {
     canvas: Canvas<Window>,
@@ -154,11 +157,25 @@ impl Game {
     }
 
     pub fn render(&mut self, assets: &Assets) {
+        self.canvas.set_draw_color(Color::RGB(64, 192, 255));
+
         self.canvas.clear();
 
         let _ = self
             .canvas
             .fill_rect(Rect::new(0, 0, self.screen_width, self.screen_height));
+
+        self.canvas.set_draw_color(Color::RGB(0, 0, 0));
+        let square1: Polygon = Polygon::new(
+        vec![
+            Vec2::new(50.0, 100.0),
+            Vec2::new(100.0, 100.0),
+            Vec2::new(100.0, 150.0),
+            Vec2::new(50.0, 150.0),
+        ],
+        Vec2::new(0.0, 0.0),
+    );
+        render_polygon(&mut self.canvas, &square1).expect("square1 failed");
 
         self.player
             .render(&mut self.canvas, assets)
