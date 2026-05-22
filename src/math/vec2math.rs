@@ -39,3 +39,5 @@ pub fn normal(v1: &Vec2, v2: &Vec2) -> Vec2 {
         y: (difference(&vec![*v1, *v2]).x),
     }
 }
+
+pub fn dot_product(v1: &Vec2, v2: &Vec2) -> f32 {(v1.x * v2.x) + (v1.y * v2.x)}
