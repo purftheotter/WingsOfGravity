@@ -1,11 +1,11 @@
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode;
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
-use sdl2::EventPump;
+use sdl3::event::Event;
+use sdl3::keyboard::Keycode;
+use sdl3::keyboard::Scancode;
+use sdl3::pixels::Color;
+use sdl3::rect::Rect;
+use sdl3::render::Canvas;
+use sdl3::video::Window;
+use sdl3::EventPump;
 use std::time::Instant;
 
 use crate::entities::ships::Fighter;
@@ -28,21 +28,22 @@ impl Game {
         let screen_width = 1920;
         let screen_height = 1080;
 
-        //Initilize sdl2
-        let sdl_context = sdl2::init()?;
-        let video_subsystem = sdl_context.video()?;
+
+        //Initilize sdl3
+        let sdl_context = sdl3::init().unwrap();
+        let video_subsystem = sdl_context.video().unwrap();
 
         //Create window
         let window = video_subsystem
             .window("Rust!", screen_width, screen_height)
-            .fullscreen_desktop()
+            .fullscreen()
             .build()
             .unwrap();
 
         //Create canvas
-        let mut canvas = window.into_canvas().present_vsync().build().unwrap();
+        let mut canvas = window.into_canvas();
         canvas
-            .set_logical_size(screen_width, screen_height)
+            .set_logical_size(screen_width, screen_height,sdl3::sys::render::SDL_RendererLogicalPresentation::INTEGER_SCALE)
             .unwrap();
 
         let clear_color = Color::RGB(64, 192, 255);
@@ -52,7 +53,7 @@ impl Game {
         let event_pump = sdl_context.event_pump().unwrap();
 
         //Player
-        let mut player = Fighter::new(
+        let player = Fighter::new(
             (screen_width / 2) as f32,
             (screen_height / 2) as f32,
             0.0,

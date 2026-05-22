@@ -1,6 +1,7 @@
-use sdl2::rect::{FPoint, FRect, Rect};
-use sdl2::render::Canvas;
-use sdl2::video::Window;
+use sdl3::rect::Rect;
+use sdl3::render::{FPoint,FRect};
+use sdl3::render::Canvas;
+use sdl3::video::Window;
 
 use crate::components::speeds::Cartisian;
 use crate::components::speeds::Rotation;
@@ -37,7 +38,7 @@ impl Fighter {
             },
             velocity: Velocity { x: 0.0, y: 0.0 },
             thrust: Cartisian { speed: (200.0) },
-            turn_rate: Rotation { speed: (100.0) },
+            turn_rate: Rotation { speed: (150.0) },
             sprite: Sprite {
                 texture_id: texture_id.to_string(),
             },
@@ -48,7 +49,7 @@ impl Fighter {
 impl Renderable for Fighter {
     fn render(&self, canvas: &mut Canvas<Window>, assets: &Assets) -> Result<(), String> {
         if let Some(texture) = assets.get(&self.sprite.texture_id) {
-            canvas.copy_ex_f(
+            canvas.copy_ex(
                 texture,
                 Rect::new(0, 0, texture.query().width, texture.query().height),
                 FRect::new(
@@ -64,7 +65,7 @@ impl Renderable for Fighter {
                 ),
                 false,
                 false,
-            )?;
+            ).expect("Ship render");
         }
         Ok(())
     }

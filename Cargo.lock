@@ -6,26 +6,14 @@ version = 4
 name = "Wings_Of_Gravity"
 version = "0.1.0"
 dependencies = [
- "sdl2",
+ "sdl3",
 ]
 
 [[package]]
 name = "bitflags"
-version = "1.3.2"
+version = "2.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
-
-[[package]]
-name = "cfg-if"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
-
-[[package]]
-name = "lazy_static"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+checksum = "c4512299f36f043ab09a583e57bceb5a5aab7a73db1805848e8fef3c9e8c78b3"
 
 [[package]]
 name = "libc"
@@ -34,30 +22,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
-name = "sdl2"
-version = "0.38.0"
+name = "sdl3"
+version = "0.18.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d42407afc6a8ab67e36f92e80b8ba34cbdc55aaeed05249efe9a2e8d0e9feef"
+checksum = "25bd22eb1bbc9137e914022b4994ed35591eea0884e9e3e98e6d9895cad6e1d2"
 dependencies = [
  "bitflags",
- "lazy_static",
  "libc",
- "sdl2-sys",
+ "sdl3-image-sys",
+ "sdl3-sys",
 ]
 
 [[package]]
-name = "sdl2-sys"
-version = "0.38.0"
+name = "sdl3-image-sys"
+version = "0.6.3+SDL-image-3.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ff61407fc75d4b0bbc93dc7e4d6c196439965fbef8e4a4f003a36095823eac0"
+checksum = "bf532fab7cf015de8c55eec6c82db65a964c8874a22c88cead952813db410f90"
 dependencies = [
- "cfg-if",
- "libc",
- "version-compare",
+ "sdl3-sys",
 ]
 
 [[package]]
-name = "version-compare"
-version = "0.1.1"
+name = "sdl3-sys"
+version = "0.6.5+SDL-3.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "579a42fc0b8e0c63b76519a339be31bed574929511fa53c1a3acae26eb258f29"
+checksum = "51ca7a36c908d1d2b6c259d426a5000fbb70e764dcc430f6a373cc151f614f68"
