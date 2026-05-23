@@ -9,13 +9,16 @@ use sdl3::EventPump;
 use std::time::Instant;
 
 use crate::entities::ships::Fighter;
+use crate::math::shapes::Circle;
 use crate::rendering::assets::Assets;
+use crate::rendering::debug_render::render_circle;
 use crate::rendering::debug_render::render_polygon;
 use crate::systems::movement::apply_velocity;
 use crate::systems::movement::rotated_velocity;
 use crate::traits::renderable::Renderable;
 use crate::math::vec2math::Vec2;
 use crate::math::shapes::Polygon;
+use crate::systems::collision::two_circle_collision;
 
 pub struct Game {
     canvas: Canvas<Window>,
@@ -165,17 +168,8 @@ impl Game {
             .canvas
             .fill_rect(Rect::new(0, 0, self.screen_width, self.screen_height));
 
+        //debug renderer for working out collisions
         self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-        let square1: Polygon = Polygon::new(
-        vec![
-            Vec2::new(50.0, 100.0),
-            Vec2::new(100.0, 100.0),
-            Vec2::new(100.0, 150.0),
-            Vec2::new(50.0, 150.0),
-        ],
-        Vec2::new(0.0, 0.0),
-    );
-        render_polygon(&mut self.canvas, &square1).expect("square1 failed");
 
         self.player
             .render(&mut self.canvas, assets)

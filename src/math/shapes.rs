@@ -1,14 +1,13 @@
 use crate::math::vec2math::Vec2;
 
-#[derive(Debug)]
-
 pub struct Circle {
     pub radius: f32,
+    pub center: Vec2,
 }
 
 impl Circle {
-    pub fn new(r: f32) -> Self {
-        Self { radius: r }
+    pub fn new(r: f32, c: Vec2) -> Self {
+        Self {radius:r,center:c}
     }
 }
 
