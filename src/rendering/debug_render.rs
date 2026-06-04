@@ -1,7 +1,7 @@
 use crate::math::shapes::{Circle, Polygon};
-use sdl3::render::Canvas;
-use sdl3::video::Window;
-use sdl3::render::FPoint;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
+use sdl2::rect::FPoint;
 
 pub fn render_polygon(
     canvas: &mut Canvas<Window>,
@@ -17,7 +17,7 @@ pub fn render_polygon(
                 (i + 1) % polygon.points.len()
             ];
 
-        canvas.draw_line(
+        canvas.draw_fline(
             FPoint::new(current.x, current.y),
             FPoint::new(next.x, next.y),
         ).expect("render_polygon failed");
@@ -59,7 +59,7 @@ pub fn render_circle(
             circle.center.y
             + circle.radius * theta2.sin();
 
-        canvas.draw_line(
+        canvas.draw_fline(
             FPoint::new(x1, y1),
             FPoint::new(x2, y2),
         ).expect("render_circle failed");

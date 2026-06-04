@@ -1,11 +1,12 @@
-use sdl3::event::Event;
-use sdl3::keyboard::Keycode;
-use sdl3::keyboard::Scancode;
-use sdl3::pixels::Color;
-use sdl3::rect::Rect;
-use sdl3::render::Canvas;
-use sdl3::video::Window;
-use sdl3::EventPump;
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode;
+use sdl2::libc::SECCOMP_RET_KILL;
+use sdl2::pixels::Color;
+use sdl2::rect::Rect;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
+use sdl2::EventPump;
 use std::time::Instant;
 
 use crate::entities::ships::Fighter;
@@ -35,8 +36,8 @@ impl Game {
         let screen_height = 1080;
 
 
-        //Initilize sdl3
-        let sdl_context = sdl3::init().unwrap();
+        //Initilize sdl2
+        let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
         //Create window
@@ -47,9 +48,10 @@ impl Game {
             .unwrap();
 
         //Create canvas
-        let mut canvas = window.into_canvas();
-        canvas
-            .set_logical_size(screen_width, screen_height,sdl3::sys::render::SDL_RendererLogicalPresentation::INTEGER_SCALE)
+        let mut canvas = window
+            .into_canvas()
+            .present_vsync()
+            .build()
             .unwrap();
 
         let clear_color = Color::RGB(64, 192, 255);
@@ -103,6 +105,10 @@ impl Game {
             self.update(dt);
 
             self.render(&assets);
+
+            self.debug_render();
+
+            self.canvas.present();
         }
 
         Ok(())
@@ -168,13 +174,26 @@ impl Game {
             .canvas
             .fill_rect(Rect::new(0, 0, self.screen_width, self.screen_height));
 
-        //debug renderer for working out collisions
-        self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-
         self.player
             .render(&mut self.canvas, assets)
             .expect("Player Render Failed");
 
-        self.canvas.present();
+    }
+
+    pub fn debug_render(&mut self) {
+        let c1 = Circle::new(Vec2::new(20.0, 20.0), 10.0);
+        let c2 = Circle::new(Vec2::new(20.0, 30.0), 10.0);
+
+        if two_circle_collision(&c1, &c2) {
+            self.canvas.set_draw_color(Color::RGB(255,0,0));
+        }else {
+            self.canvas.set_draw_color(Color::RGB(0, 255, 0));
+        }
+
+        render_circle(&mut self.canvas, &c1).unwrap();
+        render_circle(&mut self.canvas, &c2).unwrap();
+
+        
+
     }
 }

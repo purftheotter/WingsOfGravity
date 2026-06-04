@@ -1,7 +1,6 @@
-use sdl3::rect::Rect;
-use sdl3::render::{FPoint,FRect};
-use sdl3::render::Canvas;
-use sdl3::video::Window;
+use sdl2::rect::{Rect,Point,FPoint,FRect};
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
 use crate::components::speeds::Cartisian;
 use crate::components::speeds::Rotation;
@@ -49,7 +48,7 @@ impl Fighter {
 impl Renderable for Fighter {
     fn render(&self, canvas: &mut Canvas<Window>, assets: &Assets) -> Result<(), String> {
         if let Some(texture) = assets.get(&self.sprite.texture_id) {
-            canvas.copy_ex(
+            canvas.copy_ex_f(
                 texture,
                 Rect::new(0, 0, texture.query().width, texture.query().height),
                 FRect::new(
@@ -61,7 +60,7 @@ impl Renderable for Fighter {
                 self.transform.rotation as f64,
                 FPoint::new(
                     ((texture.query().width as f32) * self.transform.scale_x) / 2.0,
-                    (texture.query().height as f32 * self.transform.scale_y) / 2.0,
+                    ((texture.query().height as f32) * self.transform.scale_y) / 2.0,
                 ),
                 false,
                 false,

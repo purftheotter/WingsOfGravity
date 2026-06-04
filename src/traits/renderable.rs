@@ -1,5 +1,5 @@
-use sdl3::render::Canvas;
-use sdl3::video::Window;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
 
 use crate::rendering::assets::Assets;
 
