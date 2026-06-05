@@ -2,6 +2,8 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+use crate::Vec2;
+
 use crate::components::sprite::Sprite;
 use crate::components::transform::Transform;
 use crate::components::velocity::Velocity;
@@ -15,18 +17,16 @@ pub struct Stone {
 }
 
 impl Stone {
-    pub fn new(x: f32, y: f32, x_velocity: f32, y_velocity: f32, texture_id: &str) -> Self {
+    pub fn new(position: Vec2, velocity: Vec2, texture_id: &str) -> Self {
         Self {
             transform: Transform {
-                x,
-                y,
+                position,
                 rotation: 0.0,
                 scale_x: 1.0,
                 scale_y: 1.0,
             },
             velocity: Velocity {
-                x: x_velocity,
-                y: y_velocity,
+                velocity,
             },
             sprite: Sprite {
                 texture_id: texture_id.to_string(),
@@ -42,8 +42,8 @@ impl Renderable for Stone {
                 texture,
                 None,
                 Rect::new(
-                    self.transform.x as i32,
-                    self.transform.y as i32,
+                    self.transform.position.x as i32,
+                    self.transform.position.y as i32,
                     texture.query().width,
                     texture.query().height,
                 ),

@@ -1,7 +1,6 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::keyboard::Scancode;
-use sdl2::libc::SECCOMP_RET_KILL;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
@@ -62,8 +61,10 @@ impl Game {
 
         //Player
         let player = Fighter::new(
-            (screen_width / 2) as f32,
-            (screen_height / 2) as f32,
+            Vec2::new(
+                (screen_width / 2) as f32,
+                (screen_height / 2) as f32,
+            ),
             0.0,
             2.0,
             2.0,
@@ -181,21 +182,30 @@ impl Game {
     }
 
     pub fn debug_render(&mut self) {
-        let c1 = Circle::new(Vec2::new(20.0, 20.0), 10.0);
-        let c2 = Circle::new(Vec2::new(40.0, 40.0), 10.0);
+        let square1: Polygon = Polygon::new(
+        vec![
+            Vec2::new(50.0, 100.0),
+            Vec2::new(100.0, 100.0),
+            Vec2::new(100.0, 150.0),
+            Vec2::new(50.0, 150.0),
+        ],
+        Vec2::new(0.0, 0.0),
+    );
+    let square2: Polygon = Polygon::new(
+        vec![
+            Vec2::new(0.0, 100.0),
+            Vec2::new(50.0, 100.0),
+            Vec2::new(50.0, 150.0),
+            Vec2::new(0.0, 150.0),
+        ],
+        Vec2::new(0.0, 0.0),
+    );
 
-        if two_circle_collision(&c1, &c2) {
-            self.canvas.set_draw_color(Color::RGB(255,0,0));
-            println!("Circle collision: true");
-        }else {
-            self.canvas.set_draw_color(Color::RGB(0, 255, 0));
-            println!("Circle collision: false");
-        }
+    self.canvas.set_draw_color(Color::RGB(0, 255, 0));
 
-        render_circle(&mut self.canvas, &c1).unwrap();
-        render_circle(&mut self.canvas, &c2).unwrap();
+    render_polygon(&mut self.canvas, &square1).expect("render_polygon fialed");
+    render_polygon(&mut self.canvas, &square2).expect("render_polygon failed");
 
-        
 
     }
 }

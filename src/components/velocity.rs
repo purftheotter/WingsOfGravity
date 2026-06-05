@@ -1,5 +1,6 @@
+use crate::math::vec2math::Vec2;
+
 #[derive(Debug)]
 pub struct Velocity {
-    pub x: f32,
-    pub y: f32,
+    pub velocity :Vec2
 }
