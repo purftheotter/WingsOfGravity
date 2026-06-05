@@ -1,3 +1,4 @@
+use crate::components::transform::Transform;
 use crate::math::shapes::{Circle, Polygon};
 use crate::math::vec2math::project_polygon;
 
@@ -34,9 +35,9 @@ pub fn sap_collision(pg1: &Polygon, pg2: &Polygon) -> bool {
     return true;
 }
 
-pub fn two_circle_collision(c1: &Circle, c2: &Circle) -> bool {
-    let dx = c1.center.x - c2.center.x;
-    let dy = c1.center.y - c2.center.y;
+pub fn two_circle_collision(c1: &Circle,t1: &Transform, c2: &Circle, t2: &Transform) -> bool {
+    let dx = t1.position.x - t2.position.x;
+    let dy = t1.position.y - t2.position.y;
 
     let distance_sqaured = dx * dx + dy * dy;
 

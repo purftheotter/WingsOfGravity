@@ -1,3 +1,4 @@
+use crate::components::transform::Transform;
 use crate::math::shapes::{Circle, Polygon};
 use sdl2::render::Canvas;
 use sdl2::video::Window;
@@ -28,6 +29,7 @@ pub fn render_polygon(
 
 pub fn render_circle(
     canvas: &mut Canvas<Window>,
+    transform: &Transform,
     circle: &Circle,
 ) -> Result<(), String> {
 
@@ -44,19 +46,19 @@ pub fn render_circle(
             * std::f32::consts::TAU;
 
         let x1 =
-            circle.center.x
+            transform.position.x
             + circle.radius * theta1.cos();
 
         let y1 =
-            circle.center.y
+            transform.position.y
             + circle.radius * theta1.sin();
 
         let x2 =
-            circle.center.x
+            transform.position.x
             + circle.radius * theta2.cos();
 
         let y2 =
-            circle.center.y
+            transform.position.y
             + circle.radius * theta2.sin();
 
         canvas.draw_fline(

@@ -8,11 +8,14 @@ use sdl2::video::Window;
 use sdl2::EventPump;
 use std::time::Instant;
 
+use crate::components::hitbox::Hitbox;
+
 use crate::entities::ships::Fighter;
 use crate::math::shapes::Circle;
 use crate::rendering::assets::Assets;
 use crate::rendering::debug_render::render_circle;
 use crate::rendering::debug_render::render_polygon;
+use crate::systems::collision::sap_collision;
 use crate::systems::movement::apply_velocity;
 use crate::systems::movement::rotated_velocity;
 use crate::traits::renderable::Renderable;
@@ -27,13 +30,13 @@ pub struct Game {
     running: bool,
     screen_width: u32,
     screen_height: u32,
+    debug_mode: bool,
 }
 
 impl Game {
     pub fn new() -> Result<Self, String> {
         let screen_width = 1920;
         let screen_height = 1080;
-
 
         //Initilize sdl2
         let sdl_context = sdl2::init().unwrap();
@@ -78,10 +81,13 @@ impl Game {
             running: true,
             screen_width,
             screen_height,
+            debug_mode:false,
+
         })
     }
 
     pub fn run(&mut self) -> Result<(), String> {
+     
         //texture creator
         let texture_creator = self.canvas.texture_creator();
 
@@ -151,7 +157,12 @@ impl Game {
 
         for event in self.event_pump.poll_iter() {
             match event {
+                Event::KeyDown { scancode: Some(Scancode::F2), .. } => {
+                    self.debug_mode = !self.debug_mode;
+                }
+
                 Event::Quit { .. } => self.running = false,
+
                 Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
@@ -182,30 +193,13 @@ impl Game {
     }
 
     pub fn debug_render(&mut self) {
-        let square1: Polygon = Polygon::new(
-        vec![
-            Vec2::new(50.0, 100.0),
-            Vec2::new(100.0, 100.0),
-            Vec2::new(100.0, 150.0),
-            Vec2::new(50.0, 150.0),
-        ],
-        Vec2::new(0.0, 0.0),
-    );
-    let square2: Polygon = Polygon::new(
-        vec![
-            Vec2::new(0.0, 100.0),
-            Vec2::new(50.0, 100.0),
-            Vec2::new(50.0, 150.0),
-            Vec2::new(0.0, 150.0),
-        ],
-        Vec2::new(0.0, 0.0),
-    );
+        if !self.debug_mode {return;}
 
-    self.canvas.set_draw_color(Color::RGB(0, 255, 0));
+        self.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
-    render_polygon(&mut self.canvas, &square1).expect("render_polygon fialed");
-    render_polygon(&mut self.canvas, &square2).expect("render_polygon failed");
-
+        if let Hitbox::Circle { radius } = self.player.hitbox {
+            render_circle(&mut self.canvas,&self.player.transform, &Circle::new(radius)).unwrap();
+}
 
     }
 }

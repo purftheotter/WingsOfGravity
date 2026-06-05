@@ -1,5 +1,7 @@
 use std::ops::{Add,Sub,Mul,Div,AddAssign,SubAssign,MulAssign,DivAssign};
 
+use crate::components::transform::Transform;
+
 #[derive(Clone, Copy, Debug,PartialEq)]
 
 pub struct Vec2 {
@@ -95,4 +97,17 @@ pub fn project_polygon(points: &[Vec2],axis: Vec2) -> (f32, f32) {
     }
 
     (min,max)
+}
+
+fn transform_points(points: &[Vec2], t: &Transform) -> Vec<Vec2> {
+    let (sin, cos) = t.rotation.sin_cos();
+
+    points.iter().map(|p| {
+        let rotated = Vec2::new(
+            p.x * cos - p.y * sin,
+            p.x * sin + p.y * cos,
+        );
+
+        rotated + t.position
+    }).collect()
 }
