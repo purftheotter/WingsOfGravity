@@ -182,12 +182,14 @@ impl Game {
 
     pub fn debug_render(&mut self) {
         let c1 = Circle::new(Vec2::new(20.0, 20.0), 10.0);
-        let c2 = Circle::new(Vec2::new(20.0, 30.0), 10.0);
+        let c2 = Circle::new(Vec2::new(40.0, 40.0), 10.0);
 
         if two_circle_collision(&c1, &c2) {
             self.canvas.set_draw_color(Color::RGB(255,0,0));
+            println!("Circle collision: true");
         }else {
             self.canvas.set_draw_color(Color::RGB(0, 255, 0));
+            println!("Circle collision: false");
         }
 
         render_circle(&mut self.canvas, &c1).unwrap();
