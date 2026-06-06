@@ -13,6 +13,7 @@ use crate::components::hitbox::Hitbox;
 use crate::entity::factory::spawn_player;
 use crate::entity::{Entity,EntityType};
 use crate::math::shapes::Circle;
+use crate::math::shapes::Polygon;
 use crate::rendering::assets::Assets;
 use crate::rendering::debug_render::render_circle;
 use crate::rendering::debug_render::render_polygon;
@@ -22,13 +23,14 @@ use crate::traits::renderable::Renderable;
 use crate::math::vec2math::Vec2;
 
 pub struct Game {
-    canvas: Canvas<Window>,
-    event_pump: EventPump,
-    running: bool,
-    screen_width: u32,
-    screen_height: u32,
-    debug_mode: bool,
-    entities: Vec<Entity>
+    pub canvas: Canvas<Window>,
+    pub event_pump: EventPump,
+    pub running: bool,
+    pub screen_width: u32,
+    pub screen_height: u32,
+    pub debug_mode: bool,
+    pub entities: Vec<Entity>,
+    pub player_index: Option<usize>,
 }
 
 impl Game {
@@ -63,6 +65,7 @@ impl Game {
         //entities
         let entities = vec![];
 
+
         Ok(Self {
             canvas,
             event_pump,
@@ -71,6 +74,7 @@ impl Game {
             screen_width,
             screen_height,
             debug_mode:false,
+            player_index: None,
 
         })
     }
@@ -93,43 +97,40 @@ impl Game {
 
         while self.running {
 
-            let player = self.entities.iter_mut().find(|e| e.is_player);
+            let current_frame = Instant::now();
 
-            if let Some(player) = player {
+            let dt = current_frame.duration_since(last_frame).as_secs_f32();
 
-                let current_frame = Instant::now();
+            last_frame = current_frame;
 
-                let dt = current_frame.duration_since(last_frame).as_secs_f32();
+            self.handle_input(dt);
 
-                last_frame = current_frame;
+            self.update(dt);
 
-                self.handle_input(dt);
+            self.render(&assets);
 
-                self.update(dt);
+            self.debug_render();
 
-                self.render(&assets);
-
-                self.debug_render();
-
-                self.canvas.present();
-            }
+            self.canvas.present();
         }
 
         Ok(())
     }
 
     pub fn load_world(&mut self) {
-        self.entities.push(spawn_player(self.screen_width as f32 /2.0, self.screen_height as f32 /2.0))
+        self.entities.push(spawn_player(self.screen_width as f32 /2.0, self.screen_height as f32 /2.0));
+        self.player_index = Some(self.entities.len() -1);
     }
 
     pub fn handle_input(&mut self, dt: f32) {
 
-        let player = self.entities.iter_mut().find(|e| e.is_player);
 
-        if let Some(player) = player {
+        if let Some(player_index) = self.player_index {
 
             //inputs
             let keyboard = self.event_pump.keyboard_state();
+
+            let player = &mut self.entities[player_index];
 
             if keyboard.is_scancode_pressed(Scancode::W) || keyboard.is_scancode_pressed(Scancode::Up) {
                 rotated_velocity(
@@ -182,9 +183,8 @@ impl Game {
 
     pub fn update(&mut self, dt: f32) {
 
-        let player = self.entities.iter_mut().find(|e| e.is_player);
-
-        if let Some(player) = player {
+        if let Some(player_index) = self.player_index {
+            let player = &mut self.entities[player_index];
 
             apply_velocity(&mut player.transform, &player.velocity, dt);
         }
@@ -200,10 +200,9 @@ impl Game {
             .fill_rect(Rect::new(0, 0, self.screen_width, self.screen_height));
 
 
-        let player = self.entities.iter_mut().find(|e| e.is_player);
+        if let Some(player_index) = self.player_index {
 
-        if let Some(player) = player {
-
+            let player = &mut self.entities[player_index];
 
             player
                 .render(&mut self.canvas, assets)
@@ -216,13 +215,27 @@ impl Game {
 
         self.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
+        if let Some(player_index) = self.player_index {
+            let player = &mut self.entities[player_index];
 
-        let player = self.entities.iter_mut().find(|e| e.is_player);
+            match &player.hitbox {
+                Hitbox::Circle { radius } => {
+                    render_circle(
+                        &mut self.canvas,
+                        &player.transform,
+                        &Circle::new(*radius),
+                    ).unwrap();
+                }
 
-        if let Some(player) = player {
-            if let Hitbox::Circle { radius } = player.hitbox {
-            render_circle(&mut self.canvas,&player.transform, &Circle::new(radius)).unwrap();
+                Hitbox::Polygon { points } => {
+                    render_polygon(
+                        &mut self.canvas,
+                        &player.transform,
+                        &Polygon::new(points.clone()),
+                    ).unwrap();
+                }
             }
+
         }
 
     }

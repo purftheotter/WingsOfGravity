@@ -4,6 +4,5 @@ use crate::Vec2;
 pub struct Transform {
     pub position: Vec2,
     pub rotation: f32,
-    pub scale_x: f32,
-    pub scale_y: f32,
+    pub scale: Vec2,
 }

@@ -11,16 +11,18 @@ pub fn spawn_player(x:f32, y:f32) -> Entity {
     Entity {
         name: "Player".to_string(),
         entity_type: EntityType::Ship,
-        is_player: true,
 
         transform: Transform {
             position: Vec2::new(x, y),
             rotation: 0.0,
-            scale_x: 2.0,
-            scale_y: 2.0,
+            scale: Vec2::new(2.0, 2.0),
         },
         velocity: Velocity { velocity: Vec2::new(0.0,0.0) },
-        hitbox: Hitbox::Circle { radius: 32.0 },
+        hitbox: Hitbox::Polygon { points: vec![
+                Vec2::new(0.0, -13.86),
+            Vec2::new(-16.0, 13.86),
+            Vec2::new(16.0, 13.86),
+        ] },
         sprite: Sprite { texture_id: "fighter".to_string() },
         ship: Some(Ship {
             class: ShipClass::Scout,

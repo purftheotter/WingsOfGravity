@@ -6,16 +6,18 @@ use sdl2::rect::FPoint;
 
 pub fn render_polygon(
     canvas: &mut Canvas<Window>,
+    transform: &Transform,
     polygon: &Polygon,
 ) -> Result<(), String> {
+    let transformed_polygon = polygon.apply_transformation(transform);
 
-    for i in 0..polygon.points.len() {
+    for i in 0..transformed_polygon.points.len() {
 
-        let current = &polygon.points[i];
+        let current = &transformed_polygon.points[i];
 
         let next =
-            &polygon.points[
-                (i + 1) % polygon.points.len()
+            &transformed_polygon.points[
+                (i + 1) % transformed_polygon.points.len()
             ];
 
         canvas.draw_fline(
