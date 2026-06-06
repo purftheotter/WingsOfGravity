@@ -7,7 +7,7 @@ use crate::components::transform::Transform;
 use crate::components::velocity::Velocity;
 use crate::components::hitbox::Hitbox;
 use crate::components::ship::ShipComponent;
-use crate::math::vec2math::Vec2;
+use crate::math::vec2::Vec2;
 use crate::rendering::assets::Assets;
 use crate::traits::renderable::Renderable;
 

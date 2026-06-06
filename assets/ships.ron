@@ -1,8 +1,14 @@
 (
   scout: (
+    mass:1.0,
+    moment_of_inertia:1.0,
+
     thrust:200.0,
-    angular_thrust:150.0,
-    angular_velocity_dampener:1.0,
+    torque:100.0,
+
+    linear_drag:0.8,
+    angular_drag:1.0,
+
     texture_id:"fighter",
     hitbox: Polygon(
       polygon: (
@@ -16,9 +22,14 @@
   ),
 
     fighter: (
-    thrust:300.0,
-    angular_thrust:200.0,
-    angular_velocity_dampener:1.0,
+    mass:2.0,
+    moment_of_inertia:1.0,
+
+    thrust:600.0,
+    torque:150.0,
+
+    linear_drag:0.8,
+    angular_drag:1.5,
     texture_id:"fighter",
     hitbox: Polygon(
       polygon: (
@@ -31,9 +42,15 @@
     ),
   ),
     freighter: (
-    thrust:100.0,
-    angular_thrust:100.0,
-    angular_velocity_dampener:1.0,
+    mass:8.0,
+    moment_of_inertia:20.0,
+
+    thrust:200.0,
+    torque:150.0,
+
+    linear_drag:0.2,
+    angular_drag:2.0,
+
     texture_id:"fighter",
     hitbox: Polygon(
       polygon: (

@@ -1,9 +1,10 @@
+use crate::components::ship::ShipInput;
 use crate::components::velocity::Velocity;
 use crate::components::sprite::Sprite;
 use crate::components::{ShipComponent, ShipClass};
 use crate::components::transform::Transform;
 use crate::entity::{Entity,EntityType};
-use crate::math::vec2math::Vec2;
+use crate::math::vec2::Vec2;
 use crate::assets::ship_database::ShipDatabase;
 
 pub fn spawn_player(spaw_point:Vec2,ship_db: &ShipDatabase, class: ShipClass) -> Entity {
@@ -26,6 +27,7 @@ pub fn spawn_player(spaw_point:Vec2,ship_db: &ShipDatabase, class: ShipClass) ->
         },
         ship_component: Some(ShipComponent {
             class: class,
+            input: ShipInput::new(),
         })
 
     }

@@ -1,4 +1,4 @@
-use crate::{components::transform::Transform, math::vec2math::Vec2};
+use crate::{components::transform::Transform, math::vec2::Vec2};
 
 pub struct Circle {
     pub radius: f32,

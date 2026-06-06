@@ -15,14 +15,12 @@ use crate::components::hitbox::Hitbox;
 use crate::entity::factory::spawn_player;
 use crate::entity::Entity;
 use crate::math::shapes::Circle;
-use crate::math::shapes::Polygon;
 use crate::rendering::assets::Assets;
 use crate::rendering::debug_render::render_circle;
 use crate::rendering::debug_render::render_polygon;
-use crate::systems::movement::apply_velocity;
-use crate::systems::movement::apply_acceleration;
+use crate::systems::physics::{apply_forward_thrust,apply_torque,apply_velocity};
 use crate::traits::renderable::Renderable;
-use crate::math::vec2math::Vec2;
+use crate::math::vec2::Vec2;
 
 pub struct Game {
     pub canvas: Canvas<Window>,
@@ -110,7 +108,7 @@ impl Game {
 
             last_frame = current_frame;
 
-            self.handle_input(dt);
+            self.handle_input();
 
             self.update(dt);
 
@@ -125,11 +123,18 @@ impl Game {
     }
 
     pub fn load_world(&mut self) {
-        self.entities.push(spawn_player(Vec2::new(self.screen_width as f32 /2.0, self.screen_height as f32 /2.0),&self.ship_database,ShipClass::Scout));
+        self.entities.push(
+            spawn_player(
+                Vec2::new(
+                    self.screen_width as f32 /2.0,
+                    self.screen_height as f32 /2.0
+                ),
+            &self.ship_database,
+            ShipClass::Fighter));
         self.player_index = Some(self.entities.len() -1);
     }
 
-    pub fn handle_input(&mut self, dt: f32) {
+    pub fn handle_input(&mut self) {
 
 
         if let Some(player_index) = self.player_index {
@@ -139,37 +144,28 @@ impl Game {
 
             let player = &mut self.entities[player_index];
 
-            let player_ship = player.ship_component.as_ref().unwrap();
-            let player_ship_stats = self.ship_database.get(player_ship.class);
+            let player_ship = player.ship_component.as_mut().unwrap();
+
+            player_ship.input.zero();
 
             if keyboard.is_scancode_pressed(Scancode::W) || keyboard.is_scancode_pressed(Scancode::Up) {
-                apply_acceleration(
-                    &mut player.velocity,
-                    &player.transform.rotation,
-                    &player_ship_stats.thrust,
-                    dt,
-                );
+                player_ship.input.thrust += 1.0;
             }
 
             if keyboard.is_scancode_pressed(Scancode::A) || keyboard.is_scancode_pressed(Scancode::Left)
             {
-                player.velocity.angular -= player_ship_stats.angular_thrust * dt;
+                player_ship.input.turn -= 1.0;
             }
 
             if keyboard.is_scancode_pressed(Scancode::S) || keyboard.is_scancode_pressed(Scancode::Down)
             {
-                apply_acceleration(
-                    &mut player.velocity,
-                    &player.transform.rotation,
-                    &-player_ship_stats.thrust,
-                    dt,
-                );
+                player_ship.input.thrust -= 0.1;
             }
 
             if keyboard.is_scancode_pressed(Scancode::D)
                 || keyboard.is_scancode_pressed(Scancode::Right)
             {
-                player.velocity.angular += player_ship_stats.thrust * dt;
+                player_ship.input.turn += 1.0;
             }
         }
 
@@ -198,11 +194,22 @@ impl Game {
             let player_ship = player.ship_component.as_ref().unwrap();
             let player_ship_stats = self.ship_database.get(player_ship.class);
 
-            apply_velocity(&mut player.transform, &player.velocity, dt);
+            //update velocity
+            apply_forward_thrust(
+                &mut player.velocity,
+                &player.transform.rotation,
+                &(player_ship_stats.thrust * player_ship.input.thrust),
+                &player_ship_stats.mass,
+                &dt
+            );
+            apply_torque(
+                &mut player.velocity,
+                &(player_ship_stats.torque * player_ship.input.turn),
+                &player_ship_stats.moment_of_inertia,
+                &dt
+            );
 
-            player.velocity.angular *= (-player_ship_stats.angular_velocity_dampener * dt).exp();
-
-            player.velocity.angular = player.velocity.angular.clamp(-500.0, 500.0);
+            apply_velocity(&mut player.transform, &player.velocity, &dt);
 
         }
     }

@@ -1,4 +1,4 @@
-use crate::math::vec2math::Vec2;
+use crate::math::vec2::Vec2;
 
 #[derive(Debug)]
 pub struct Transform {

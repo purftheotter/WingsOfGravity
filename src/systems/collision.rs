@@ -1,6 +1,6 @@
 use crate::components::transform::Transform;
 use crate::math::shapes::{Circle, Polygon};
-use crate::math::vec2math::{Vec2, project_polygon};
+use crate::math::vec2::{Vec2, project_polygon};
 
 pub fn sat_collision(
     t1: &Transform,

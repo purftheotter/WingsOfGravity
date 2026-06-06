@@ -1,2 +1,2 @@
 pub mod shapes;
-pub mod vec2math;
+pub mod vec2;
