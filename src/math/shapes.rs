@@ -10,6 +10,7 @@ impl Circle {
     }
 }
 
+#[derive(Clone,serde::Deserialize)]
 pub struct Polygon {
     pub points: Vec<Vec2>,
 }

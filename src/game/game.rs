@@ -8,17 +8,19 @@ use sdl2::video::Window;
 use sdl2::EventPump;
 use std::time::Instant;
 
+use crate::assets::ship_database::ShipDatabase;
+use crate::components::ShipClass;
 use crate::components::hitbox::Hitbox;
 
 use crate::entity::factory::spawn_player;
-use crate::entity::{Entity,EntityType};
+use crate::entity::Entity;
 use crate::math::shapes::Circle;
 use crate::math::shapes::Polygon;
 use crate::rendering::assets::Assets;
 use crate::rendering::debug_render::render_circle;
 use crate::rendering::debug_render::render_polygon;
 use crate::systems::movement::apply_velocity;
-use crate::systems::movement::rotated_velocity;
+use crate::systems::movement::apply_acceleration;
 use crate::traits::renderable::Renderable;
 use crate::math::vec2math::Vec2;
 
@@ -31,6 +33,7 @@ pub struct Game {
     pub debug_mode: bool,
     pub entities: Vec<Entity>,
     pub player_index: Option<usize>,
+    pub ship_database: ShipDatabase,
 }
 
 impl Game {
@@ -62,6 +65,9 @@ impl Game {
         //Event pump
         let event_pump = sdl_context.event_pump().unwrap();
 
+        //make ship database
+        let ship_database = ShipDatabase::load().expect("Failing while trying to load ShipDatabase");
+
         //entities
         let entities = vec![];
 
@@ -75,6 +81,7 @@ impl Game {
             screen_height,
             debug_mode:false,
             player_index: None,
+            ship_database,
 
         })
     }
@@ -90,7 +97,7 @@ impl Game {
         let mut assets = Assets::new();
 
         //loading the textures for my assets
-        assets.load_texture(&texture_creator, "fighter", "assets/fighter.png")?;
+        assets.load_texture(&texture_creator, "fighter", "assets/textures/fighter.png")?;
 
         //setup for making the loop run at a consistent rate
         let mut last_frame = Instant::now();
@@ -118,7 +125,7 @@ impl Game {
     }
 
     pub fn load_world(&mut self) {
-        self.entities.push(spawn_player(self.screen_width as f32 /2.0, self.screen_height as f32 /2.0));
+        self.entities.push(spawn_player(Vec2::new(self.screen_width as f32 /2.0, self.screen_height as f32 /2.0),&self.ship_database,ShipClass::Scout));
         self.player_index = Some(self.entities.len() -1);
     }
 
@@ -132,26 +139,29 @@ impl Game {
 
             let player = &mut self.entities[player_index];
 
+            let player_ship = player.ship_component.as_ref().unwrap();
+            let player_ship_stats = self.ship_database.get(player_ship.class);
+
             if keyboard.is_scancode_pressed(Scancode::W) || keyboard.is_scancode_pressed(Scancode::Up) {
-                rotated_velocity(
+                apply_acceleration(
                     &mut player.velocity,
                     &player.transform.rotation,
-                    &player.ship.as_ref().unwrap().thrust.speed,
+                    &player_ship_stats.thrust,
                     dt,
                 );
             }
 
             if keyboard.is_scancode_pressed(Scancode::A) || keyboard.is_scancode_pressed(Scancode::Left)
             {
-                player.transform.rotation -= player.ship.as_ref().unwrap().turn_rate.speed * dt;
+                player.velocity.angular -= player_ship_stats.angular_thrust * dt;
             }
 
             if keyboard.is_scancode_pressed(Scancode::S) || keyboard.is_scancode_pressed(Scancode::Down)
             {
-                rotated_velocity(
+                apply_acceleration(
                     &mut player.velocity,
                     &player.transform.rotation,
-                    &-player.ship.as_ref().unwrap().thrust.speed,
+                    &-player_ship_stats.thrust,
                     dt,
                 );
             }
@@ -159,7 +169,7 @@ impl Game {
             if keyboard.is_scancode_pressed(Scancode::D)
                 || keyboard.is_scancode_pressed(Scancode::Right)
             {
-                player.transform.rotation += player.ship.as_ref().unwrap().turn_rate.speed * dt;
+                player.velocity.angular += player_ship_stats.thrust * dt;
             }
         }
 
@@ -227,11 +237,11 @@ impl Game {
                     ).unwrap();
                 }
 
-                Hitbox::Polygon { points } => {
+                Hitbox::Polygon { polygon } => {
                     render_polygon(
                         &mut self.canvas,
                         &player.transform,
-                        &Polygon::new(points.clone()),
+                        &polygon,
                     ).unwrap();
                 }
             }

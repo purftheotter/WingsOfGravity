@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 sdl2 = {version = '*', features = ["image","ttf"]}
+serde = {version = '1', features = ["derive"]}
+ron = "0.8"

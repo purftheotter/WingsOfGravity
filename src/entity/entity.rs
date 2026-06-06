@@ -1,14 +1,12 @@
-use sdl2::libc::option;
 use sdl2::rect::{Rect,FPoint,FRect};
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use crate::components::speeds::Rotation;
 use crate::components::sprite::Sprite;
 use crate::components::transform::Transform;
 use crate::components::velocity::Velocity;
 use crate::components::hitbox::Hitbox;
-use crate::components::Ship;
+use crate::components::ship::ShipComponent;
 use crate::math::vec2math::Vec2;
 use crate::rendering::assets::Assets;
 use crate::traits::renderable::Renderable;
@@ -27,7 +25,7 @@ pub struct Entity {
     pub hitbox: Hitbox,
     pub sprite: Sprite,
     
-    pub ship: Option<Ship>,
+    pub ship_component: Option<ShipComponent>,
 }
 
 impl Entity {
@@ -39,7 +37,7 @@ impl Entity {
         rotation: f32,
         scale: Vec2,
         texture_id: &str,
-        ship: Ship,
+        ship_component: ShipComponent,
     ) -> Self {
         Self {
             name,
@@ -50,13 +48,13 @@ impl Entity {
                 rotation,
                 scale,
             },
-            velocity: Velocity {velocity: Vec2::new(0.0, 0.0)},
+            velocity: Velocity {linear: Vec2::new(0.0, 0.0),angular: 0.0},
             hitbox: Hitbox::Circle { radius: 32.0 },
             sprite: Sprite {
                 texture_id: texture_id.to_string(),
             },
 
-            ship: Some(ship),
+            ship_component: Some(ship_component),
         }
     }
 }

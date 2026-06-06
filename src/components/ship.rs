@@ -1,15 +1,20 @@
-use crate::components::speeds::Cartisian;
-use crate::components::speeds::Rotation;
+use crate::components::hitbox::Hitbox;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum ShipClass {
     Scout,
     Fighter,
     Freighter,
 }
 
-pub struct Ship {
+pub struct ShipComponent {
     pub class: ShipClass,
-    pub thrust: Cartisian,
-    pub turn_rate: Rotation,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ShipStats {
+    pub thrust: f32,
+    pub angular_thrust: f32,
+    pub texture_id: String,
+    pub hitbox: Hitbox,
 }

@@ -2,7 +2,7 @@ use std::ops::{Add,Sub,Mul,Div,AddAssign,SubAssign,MulAssign,DivAssign,Neg};
 
 use crate::components::transform::Transform;
 
-#[derive(Clone, Copy, Debug,PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize)]
 
 pub struct Vec2 {
     pub x: f32,

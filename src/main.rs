@@ -5,9 +5,7 @@ mod math;
 mod rendering;
 mod systems;
 mod traits;
-
-use math::shapes::Polygon;
-use math::vec2math::Vec2;
+mod assets;
 
 use game::game::Game;
 
