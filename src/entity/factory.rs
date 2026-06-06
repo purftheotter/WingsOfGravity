@@ -19,7 +19,7 @@ pub fn spawn_player(x:f32, y:f32) -> Entity {
         },
         velocity: Velocity { velocity: Vec2::new(0.0,0.0) },
         hitbox: Hitbox::Polygon { points: vec![
-                Vec2::new(0.0, -13.86),
+            Vec2::new(0.0, -13.86),
             Vec2::new(-16.0, 13.86),
             Vec2::new(16.0, 13.86),
         ] },

@@ -1,4 +1,4 @@
-use std::ops::{Add,Sub,Mul,Div,AddAssign,SubAssign,MulAssign,DivAssign};
+use std::ops::{Add,Sub,Mul,Div,AddAssign,SubAssign,MulAssign,DivAssign,Neg};
 
 use crate::components::transform::Transform;
 
@@ -69,6 +69,17 @@ impl DivAssign for Vec2 {
     }
 }
 
+impl Neg for Vec2 {
+    type Output = Vec2;
+
+    fn neg(self) -> Vec2 {
+        Vec2 {
+            x: -self.x,
+            y: -self.y,
+        }
+    }
+}
+
 impl Vec2 {
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
@@ -80,6 +91,22 @@ impl Vec2 {
 
     pub fn dot(self, other: Self) -> f32 {
         self.x * other.x + self.y * other.y
+    }
+
+    pub fn length(self) -> f32 {
+       (self.x * self.x + self.y * self.y).sqrt()
+    }
+
+    pub fn length_sq(self) -> f32 {
+        self.x * self.x + self.y * self.y
+    }
+
+    pub fn normalize(self) -> Self {
+        let len = self.length();
+        if len == 0.0 {
+            return Self::new(0.0, 0.0);
+        }
+        self / len
     }
 }
 
