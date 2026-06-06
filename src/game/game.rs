@@ -195,8 +195,15 @@ impl Game {
 
         if let Some(player_index) = self.player_index {
             let player = &mut self.entities[player_index];
+            let player_ship = player.ship_component.as_ref().unwrap();
+            let player_ship_stats = self.ship_database.get(player_ship.class);
 
             apply_velocity(&mut player.transform, &player.velocity, dt);
+
+            player.velocity.angular *= (-player_ship_stats.angular_velocity_dampener * dt).exp();
+
+            player.velocity.angular = player.velocity.angular.clamp(-500.0, 500.0);
+
         }
     }
 
