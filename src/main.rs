@@ -1,5 +1,5 @@
 mod components;
-mod entities;
+mod entity;
 mod game;
 mod math;
 mod rendering;

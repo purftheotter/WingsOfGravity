@@ -10,27 +10,25 @@ use std::time::Instant;
 
 use crate::components::hitbox::Hitbox;
 
-use crate::entities::ships::Fighter;
+use crate::entity::factory::spawn_player;
+use crate::entity::{Entity,EntityType};
 use crate::math::shapes::Circle;
 use crate::rendering::assets::Assets;
 use crate::rendering::debug_render::render_circle;
 use crate::rendering::debug_render::render_polygon;
-use crate::systems::collision::sap_collision;
 use crate::systems::movement::apply_velocity;
 use crate::systems::movement::rotated_velocity;
 use crate::traits::renderable::Renderable;
 use crate::math::vec2math::Vec2;
-use crate::math::shapes::Polygon;
-use crate::systems::collision::two_circle_collision;
 
 pub struct Game {
     canvas: Canvas<Window>,
     event_pump: EventPump,
-    player: Fighter,
     running: bool,
     screen_width: u32,
     screen_height: u32,
     debug_mode: bool,
+    entities: Vec<Entity>
 }
 
 impl Game {
@@ -62,22 +60,13 @@ impl Game {
         //Event pump
         let event_pump = sdl_context.event_pump().unwrap();
 
-        //Player
-        let player = Fighter::new(
-            Vec2::new(
-                (screen_width / 2) as f32,
-                (screen_height / 2) as f32,
-            ),
-            0.0,
-            2.0,
-            2.0,
-            "fighter",
-        );
+        //entities
+        let entities = vec![];
 
         Ok(Self {
             canvas,
             event_pump,
-            player,
+            entities,
             running: true,
             screen_width,
             screen_height,
@@ -87,7 +76,9 @@ impl Game {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-     
+
+        self.load_world();
+
         //texture creator
         let texture_creator = self.canvas.texture_creator();
 
@@ -101,58 +92,74 @@ impl Game {
         let mut last_frame = Instant::now();
 
         while self.running {
-            let current_frame = Instant::now();
 
-            let dt = current_frame.duration_since(last_frame).as_secs_f32();
+            let player = self.entities.iter_mut().find(|e| e.is_player);
 
-            last_frame = current_frame;
+            if let Some(player) = player {
 
-            self.handle_input(dt);
+                let current_frame = Instant::now();
 
-            self.update(dt);
+                let dt = current_frame.duration_since(last_frame).as_secs_f32();
 
-            self.render(&assets);
+                last_frame = current_frame;
 
-            self.debug_render();
+                self.handle_input(dt);
 
-            self.canvas.present();
+                self.update(dt);
+
+                self.render(&assets);
+
+                self.debug_render();
+
+                self.canvas.present();
+            }
         }
 
         Ok(())
     }
 
+    pub fn load_world(&mut self) {
+        self.entities.push(spawn_player(self.screen_width as f32 /2.0, self.screen_height as f32 /2.0))
+    }
+
     pub fn handle_input(&mut self, dt: f32) {
-        //inputs
-        let keyboard = self.event_pump.keyboard_state();
 
-        if keyboard.is_scancode_pressed(Scancode::W) || keyboard.is_scancode_pressed(Scancode::Up) {
-            rotated_velocity(
-                &mut self.player.velocity,
-                &self.player.transform.rotation,
-                self.player.thrust.speed,
-                dt,
-            );
-        }
+        let player = self.entities.iter_mut().find(|e| e.is_player);
 
-        if keyboard.is_scancode_pressed(Scancode::A) || keyboard.is_scancode_pressed(Scancode::Left)
-        {
-            self.player.transform.rotation -= self.player.turn_rate.speed * dt;
-        }
+        if let Some(player) = player {
 
-        if keyboard.is_scancode_pressed(Scancode::S) || keyboard.is_scancode_pressed(Scancode::Down)
-        {
-            rotated_velocity(
-                &mut self.player.velocity,
-                &self.player.transform.rotation,
-                -self.player.thrust.speed,
-                dt,
-            );
-        }
+            //inputs
+            let keyboard = self.event_pump.keyboard_state();
 
-        if keyboard.is_scancode_pressed(Scancode::D)
-            || keyboard.is_scancode_pressed(Scancode::Right)
-        {
-            self.player.transform.rotation += self.player.turn_rate.speed * dt;
+            if keyboard.is_scancode_pressed(Scancode::W) || keyboard.is_scancode_pressed(Scancode::Up) {
+                rotated_velocity(
+                    &mut player.velocity,
+                    &player.transform.rotation,
+                    &player.ship.as_ref().unwrap().thrust.speed,
+                    dt,
+                );
+            }
+
+            if keyboard.is_scancode_pressed(Scancode::A) || keyboard.is_scancode_pressed(Scancode::Left)
+            {
+                player.transform.rotation -= player.ship.as_ref().unwrap().turn_rate.speed * dt;
+            }
+
+            if keyboard.is_scancode_pressed(Scancode::S) || keyboard.is_scancode_pressed(Scancode::Down)
+            {
+                rotated_velocity(
+                    &mut player.velocity,
+                    &player.transform.rotation,
+                    &-player.ship.as_ref().unwrap().thrust.speed,
+                    dt,
+                );
+            }
+
+            if keyboard.is_scancode_pressed(Scancode::D)
+                || keyboard.is_scancode_pressed(Scancode::Right)
+            {
+                player.transform.rotation += player.ship.as_ref().unwrap().turn_rate.speed * dt;
+            }
         }
 
         for event in self.event_pump.poll_iter() {
@@ -174,7 +181,13 @@ impl Game {
     }
 
     pub fn update(&mut self, dt: f32) {
-        apply_velocity(&mut self.player.transform, &self.player.velocity, dt);
+
+        let player = self.entities.iter_mut().find(|e| e.is_player);
+
+        if let Some(player) = player {
+
+            apply_velocity(&mut player.transform, &player.velocity, dt);
+        }
     }
 
     pub fn render(&mut self, assets: &Assets) {
@@ -186,10 +199,16 @@ impl Game {
             .canvas
             .fill_rect(Rect::new(0, 0, self.screen_width, self.screen_height));
 
-        self.player
-            .render(&mut self.canvas, assets)
-            .expect("Player Render Failed");
 
+        let player = self.entities.iter_mut().find(|e| e.is_player);
+
+        if let Some(player) = player {
+
+
+            player
+                .render(&mut self.canvas, assets)
+                .expect("Player Render Failed");
+        }
     }
 
     pub fn debug_render(&mut self) {
@@ -197,9 +216,14 @@ impl Game {
 
         self.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
-        if let Hitbox::Circle { radius } = self.player.hitbox {
-            render_circle(&mut self.canvas,&self.player.transform, &Circle::new(radius)).unwrap();
-}
+
+        let player = self.entities.iter_mut().find(|e| e.is_player);
+
+        if let Some(player) = player {
+            if let Hitbox::Circle { radius } = player.hitbox {
+            render_circle(&mut self.canvas,&player.transform, &Circle::new(radius)).unwrap();
+            }
+        }
 
     }
 }

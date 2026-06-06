@@ -2,7 +2,7 @@ use crate::components::transform::Transform;
 use crate::math::shapes::{Circle, Polygon};
 use crate::math::vec2math::project_polygon;
 
-pub fn sap_collision(pg1: &Polygon, pg2: &Polygon) -> bool {
+pub fn sat_collision(pg1: &Polygon, pg2: &Polygon) -> bool {
 
     for i in 0..pg1.points.len() {
         let va = pg1.points[i];

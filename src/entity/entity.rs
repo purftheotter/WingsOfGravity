@@ -1,53 +1,72 @@
+use sdl2::libc::option;
 use sdl2::rect::{Rect,FPoint,FRect};
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use crate::components::speeds::Cartisian;
 use crate::components::speeds::Rotation;
 use crate::components::sprite::Sprite;
 use crate::components::transform::Transform;
 use crate::components::velocity::Velocity;
-use  crate::components::hitbox::Hitbox;
+use crate::components::hitbox::Hitbox;
+use crate::components::{Ship, ship};
 use crate::math::vec2math::Vec2;
 use crate::rendering::assets::Assets;
 use crate::traits::renderable::Renderable;
 
-pub struct Fighter {
+pub enum EntityType {
+    Ship,
+    Block,
+}
+
+pub struct Entity {
+    pub name: String,
+    pub entity_type: EntityType,
+    pub is_player: bool,
+    
     pub transform: Transform,
     pub velocity: Velocity,
     pub hitbox: Hitbox,
-    pub thrust: Cartisian,
-    pub turn_rate: Rotation,
     pub sprite: Sprite,
+    
+    pub ship: Option<Ship>,
 }
 
-impl Fighter {
+impl Entity {
     pub fn new(
+        name: String,
+        entity_type: EntityType,
+        is_player: bool,
+        
         position: Vec2,
         rotation: f32,
         scale_x: f32,
         scale_y: f32,
         texture_id: &str,
+        ship: Ship,
     ) -> Self {
         Self {
+            name,
+            entity_type,
+            is_player,
+
             transform: Transform {
                 position,
                 rotation,
                 scale_x,
                 scale_y,
             },
-            velocity: Velocity {velocity: (Vec2::new(0.0, 0.0))},
-            hitbox: Hitbox::Circle { radius: (32.0) },
-            thrust: Cartisian { speed: (200.0) },
-            turn_rate: Rotation { speed: (150.0) },
+            velocity: Velocity {velocity: Vec2::new(0.0, 0.0)},
+            hitbox: Hitbox::Circle { radius: 32.0 },
             sprite: Sprite {
                 texture_id: texture_id.to_string(),
             },
+
+            ship: Some(ship),
         }
     }
 }
 
-impl Renderable for Fighter {
+impl Renderable for Entity {
     fn render(&self, canvas: &mut Canvas<Window>, assets: &Assets) -> Result<(), String> {
         if let Some(texture) = assets.get(&self.sprite.texture_id) {
             canvas.copy_ex_f(
@@ -65,7 +84,7 @@ impl Renderable for Fighter {
                 ),
                 false,
                 false,
-            ).expect("Ship render");
+            ).expect("Entity render Failed");
         }
         Ok(())
     }
