@@ -44,6 +44,6 @@ impl ShipInput {
     pub fn new() -> ShipInput {
         ShipInput { thrust: 0.0, turn: 0.0 }
     }
-    
+
 }
 

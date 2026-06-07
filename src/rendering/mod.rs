@@ -1,2 +1,3 @@
 pub mod assets;
-pub mod debug_render;
+pub mod primitives;
+pub mod entities;

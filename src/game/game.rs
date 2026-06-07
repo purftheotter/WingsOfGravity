@@ -16,10 +16,10 @@ use crate::entity::factory::spawn_player;
 use crate::entity::Entity;
 use crate::math::shapes::Circle;
 use crate::rendering::assets::Assets;
-use crate::rendering::debug_render::render_circle;
-use crate::rendering::debug_render::render_polygon;
+use crate::rendering::primitives::render_circle;
+use crate::rendering::primitives::render_polygon;
+use crate::rendering::entities::render_ship;
 use crate::systems::physics::{apply_forward_thrust,apply_torque,apply_velocity};
-use crate::traits::renderable::Renderable;
 use crate::math::vec2::Vec2;
 
 pub struct Game {
@@ -136,7 +136,6 @@ impl Game {
 
     pub fn handle_input(&mut self) {
 
-
         if let Some(player_index) = self.player_index {
 
             //inputs
@@ -209,6 +208,8 @@ impl Game {
                 &dt
             );
 
+            //update transform
+
             apply_velocity(&mut player.transform, &player.velocity, &dt);
 
         }
@@ -228,9 +229,8 @@ impl Game {
 
             let player = &mut self.entities[player_index];
 
-            player
-                .render(&mut self.canvas, assets)
-                .expect("Player Render Failed");
+            render_ship(player, &mut self.canvas, assets, &self.ship_database).expect("player render failed")
+
         }
     }
 

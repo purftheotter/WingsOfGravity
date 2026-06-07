@@ -22,13 +22,14 @@ pub fn spawn_player(spaw_point:Vec2,ship_db: &ShipDatabase, class: ShipClass) ->
         },
         velocity: Velocity { linear: Vec2::new(0.0,0.0),angular: 0.0 },
         hitbox: stats.hitbox.clone(),
-        sprite: Sprite {
+        sprite: Some(Sprite {
             texture_id: stats.texture_id.clone(),
-        },
+        }),
         ship_component: Some(ShipComponent {
             class: class,
             input: ShipInput::new(),
-        })
+        }),
+        asteroid: None,
 
     }
 
