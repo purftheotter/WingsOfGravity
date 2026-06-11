@@ -1,6 +1,6 @@
 use crate::components::transform::Transform;
 use crate::math::shapes::{Circle, Polygon};
-use crate::math::vec2::{Vec2, project_polygon};
+use crate::math::vec2::{Vec2, project_points};
 
 pub fn sat_collision(
     t1: &Transform,
@@ -22,8 +22,8 @@ pub fn sat_collision(
 
         let axis = (va - vb).normal().normalize();
 
-        let (mina, maxa) = project_polygon(&wspg1.points, axis);
-        let (minb, maxb) = project_polygon(&wspg2.points, axis);
+        let (mina, maxa) = project_points(&wspg1.points, axis);
+        let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
             return (false, None);
@@ -50,8 +50,8 @@ pub fn sat_collision(
 
         let axis = (vb-va).normal().normalize();
 
-        let (mina, maxa) = project_polygon(&wspg1.points, axis);
-        let (minb, maxb) = project_polygon(&wspg2.points, axis);
+        let (mina, maxa) = project_points(&wspg1.points, axis);
+        let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
             return (false, None);

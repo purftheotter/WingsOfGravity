@@ -129,8 +129,9 @@ impl Game {
                     self.screen_width as f32 /2.0,
                     self.screen_height as f32 /2.0
                 ),
-            &self.ship_database,
-            ShipClass::Fighter));
+                ShipClass::Scout,
+            )
+        );
         self.player_index = Some(self.entities.len() -1);
     }
 
@@ -242,7 +243,7 @@ impl Game {
         if let Some(player_index) = self.player_index {
             let player = &mut self.entities[player_index];
 
-            match &player.hitbox {
+            match &self.ship_database.get(player.ship_component.as_ref().unwrap().class).hitbox {
                 Hitbox::Circle { radius } => {
                     render_circle(
                         &mut self.canvas,

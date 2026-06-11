@@ -23,7 +23,7 @@ pub fn render_polygon(
         canvas.draw_fline(
             FPoint::new(current.x, current.y),
             FPoint::new(next.x, next.y),
-        ).expect("render_polygon failed");
+        )?;
     }
 
     Ok(())

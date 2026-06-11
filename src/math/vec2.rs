@@ -47,6 +47,15 @@ impl Mul<f32> for Vec2 {
     }
 }
 
+impl Mul<Vec2> for Vec2{
+    type Output = Self;
+
+    fn mul(self, rhs: Vec2) -> Self {
+        Vec2::new(self.x * rhs.x, self.y * rhs.y)
+    }
+    
+}
+
 impl MulAssign for Vec2 {
     fn mul_assign(&mut self, rhs: Vec2) {
         self.x *= rhs.x;
@@ -112,7 +121,7 @@ impl Vec2 {
 
 pub fn dot_product(v1: &Vec2, v2: &Vec2) -> f32 {(v1.x * v2.x) + (v1.y * v2.x)}
 
-pub fn project_polygon(points: &[Vec2],axis: Vec2) -> (f32, f32) {
+pub fn project_points(points: &[Vec2], axis: Vec2) -> (f32, f32) {
     let mut min = points[0].dot(axis);
     let mut max = min;
 
@@ -137,4 +146,91 @@ fn transform_points(points: &[Vec2], t: &Transform) -> Vec<Vec2> {
 
         rotated + t.position
     }).collect()
+}
+
+pub fn clip_right(
+    p1: Vec2,
+    p2: Vec2,
+    max_x: f32,
+) -> Option<Vec2> {
+    let delta_x = p2.x - p1.x;
+
+    if delta_x == 0.0 {
+        return None;
+    }
+
+    let t = (max_x - p1.x) / delta_x;
+
+    if !(0.0..=1.0).contains(&t) {
+        return None;
+    }
+
+    let y = p1.y + t * (p2.y - p1.y);
+
+    Some(Vec2::new(max_x, y))
+}
+
+pub fn clip_left(
+    p1: Vec2,
+    p2: Vec2,
+    min_x:f32,
+) -> Option<Vec2> {
+    let delta_x = p2.x - p1.x;
+
+    if delta_x == 0.0 {
+        return None;;
+    }
+
+    let t =(min_x - p1.x) / delta_x;
+
+    if !(0.0..=1.0).contains(&t) {
+        return None;
+    }
+ 
+    let y = p1.y + t * (p2.y - p1.y);
+
+    Some(Vec2::new(min_x, y))
+
+}
+
+pub fn clip_top(
+    p1: Vec2,
+    p2: Vec2,
+    max_y:f32,
+) -> Option<Vec2> {
+    let delta_y = p2.y - p1.y;
+
+    if delta_y == 0.0 {
+        return None;
+    }
+    
+    let t = (max_y - p1.y) / delta_y;
+    
+    if !(0.0..=1.0).contains(&t) {
+        return None;
+    }
+
+    let x = p1.x + t * (p2.x - p1.x);
+
+    Some(Vec2::new(x, max_y))
+}
+
+pub fn clip_bottom(
+    p1: Vec2,
+    p2: Vec2,
+    min_y:f32,
+) -> Option<Vec2> {
+    let delta_y = p2.y - p1.y;
+    if delta_y == 0.0 {
+        return None;
+    }
+
+    let t = (min_y - p1.y) / delta_y;
+
+    if !(0.0..=1.0).contains(&t) {
+        return None;
+    }
+    let x = p1.x + t * (p2.x - p1.x);
+
+    Some(Vec2::new(x, min_y))
 }
