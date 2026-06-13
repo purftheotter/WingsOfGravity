@@ -3,9 +3,10 @@ use crate::components::velocity::Velocity;
 use crate::components::ship::ShipComponent;
 use crate::components::asteroid::Asteroid;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntityType {
     Ship,
-    Astroid,
+    Asteroid,
 }
 
 pub struct Entity {

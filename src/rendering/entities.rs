@@ -1,14 +1,18 @@
+use std::thread::yield_now;
+
 use sdl2::rect::{Rect,FPoint,FRect};
 use sdl2::render::Canvas;
 use sdl2::video::Window;
+use sdl2::pixels::Color;
 
 use crate::components::asteroid::AsteroidChunk;
 use crate::components::transform::Transform;
+use crate::math::shapes::Circle;
 use crate::math::vec2::Vec2;
 use crate::rendering::assets::Assets;
 use crate::entity::Entity;
 use crate::assets::ship_database::ShipDatabase;
-use crate::rendering::primitives::render_polygon;
+use crate::rendering::primitives::{render_circle, render_polygon};
 
 
 pub fn render_ship(
@@ -57,62 +61,19 @@ pub fn render_chunk(
 
     ) -> Result<(),String>{
 
+    let mut world_transform = *transform;
+    world_transform.position += chunk.offset;
 
     if let Some(children) = &chunk.children {
-
-        let (min_x_size, max_x_size) = chunk
-            .shape
-            .apply_transformation(transform)
-            .project_polygon(
-                Vec2::new(
-                    1.0,
-                    0.0
-                )
-            );
-
-        let (min_y_size, max_y_size) = chunk
-            .shape
-            .apply_transformation(transform)
-            .project_polygon(
-                Vec2::new(
-                    0.0,
-                    1.0
-                )
-            );
-
-        let middle = Vec2::new(
-            min_x_size + (min_x_size - max_x_size) / 2.0,
-            min_y_size + (min_y_size - max_y_size) / 2.0);
-
-        let top_left = &children[0];
-
-        let mut top_left_transform: Transform = *transform;
-        top_left_transform.position = middle / 2.0;
-
-        let top_right = &children[1];
-
-        let mut top_right_transform: Transform = *transform;
-        top_right_transform.position = middle * Vec2::new(0.75, 0.25);
-
-        let bottom_left = &children[2];
-
-        let mut bottom_left_transform: Transform = *transform;
-        bottom_left_transform.position = middle * Vec2::new(0.25, 0.75);
-
-        let bottom_right = &children[3];
-
-        let mut bottom_right_transform: Transform = *transform;
-        bottom_right_transform.position = middle * 0.75;
-
-        render_chunk(canvas, assets,top_left, &top_left_transform);
-        render_chunk(canvas, assets,top_right, &top_right_transform);
-        render_chunk(canvas, assets, bottom_left, &bottom_left_transform);
-        render_chunk(canvas, assets, bottom_right, &bottom_right_transform);
-
+        for child in children {
+            render_chunk(canvas, assets, child, &world_transform)?;
+        }
     }else {
-        render_polygon(canvas, transform, &chunk.shape)?;
-        
+        canvas.set_draw_color(Color::RGB(100, 0, 100));
+
+        render_circle(canvas, &world_transform, &Circle::new(5.0))?;
     }
+
 
     Ok(())
 

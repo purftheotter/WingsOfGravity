@@ -4,7 +4,6 @@ mod game;
 mod math;
 mod rendering;
 mod systems;
-mod traits;
 mod assets;
 
 use game::game::Game;

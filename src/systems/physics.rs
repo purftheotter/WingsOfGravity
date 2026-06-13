@@ -1,6 +1,5 @@
 use crate::components::transform::Transform;
 use crate::components::velocity::Velocity;
-use crate::math::vec2::Vec2;
 
 pub fn apply_forward_thrust(
     velocity: &mut Velocity,

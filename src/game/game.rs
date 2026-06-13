@@ -12,10 +12,13 @@ use crate::assets::ship_database::ShipDatabase;
 use crate::components::ShipClass;
 use crate::components::hitbox::Hitbox;
 
+use crate::entity::EntityType;
+use crate::entity::factory::spaw_asteroid;
 use crate::entity::factory::spawn_player;
 use crate::entity::Entity;
 use crate::math::shapes::Circle;
 use crate::rendering::assets::Assets;
+use crate::rendering::entities::render_asteriod;
 use crate::rendering::primitives::render_circle;
 use crate::rendering::primitives::render_polygon;
 use crate::rendering::entities::render_ship;
@@ -112,7 +115,7 @@ impl Game {
 
             self.update(dt);
 
-            self.render(&assets);
+            self.render(&assets).expect("Render Failed");
 
             self.debug_render();
 
@@ -133,6 +136,13 @@ impl Game {
             )
         );
         self.player_index = Some(self.entities.len() -1);
+
+        self.entities.push(
+            spaw_asteroid(
+                Vec2::new(400.0, 400.0),
+                1.0,
+            )
+        );
     }
 
     pub fn handle_input(&mut self) {
@@ -173,6 +183,17 @@ impl Game {
             match event {
                 Event::KeyDown { scancode: Some(Scancode::F2), .. } => {
                     self.debug_mode = !self.debug_mode;
+                }
+
+                Event::KeyDown { scancode: Some(Scancode::E), ..} => {
+                    for entity in self.entities.iter_mut() {
+                        if entity.entity_type == EntityType::Asteroid {
+                            if let Some(asteroid) = entity.asteroid.as_mut() {
+                                asteroid.root.subdivide(asteroid.max_depth);
+                            }                            
+                        }
+                        
+                    }
                 }
 
                 Event::Quit { .. } => self.running = false,
@@ -216,23 +237,42 @@ impl Game {
         }
     }
 
-    pub fn render(&mut self, assets: &Assets) {
+    pub fn render(&mut self, assets: &Assets) -> Result<(), String> {
         self.canvas.set_draw_color(Color::RGB(64, 192, 255));
 
         self.canvas.clear();
 
         let _ = self
             .canvas
-            .fill_rect(Rect::new(0, 0, self.screen_width, self.screen_height));
+            .fill_rect(
+                Rect::new(
+                    0,
+                    0,
+                    self.screen_width,
+                    self.screen_height
+                )
+            );
 
 
         if let Some(player_index) = self.player_index {
 
-            let player = &mut self.entities[player_index];
+            let player = &self.entities[player_index];
 
-            render_ship(player, &mut self.canvas, assets, &self.ship_database).expect("player render failed")
-
+            render_ship(
+                player,
+                &mut self.canvas,
+                assets,
+                &self.ship_database
+            )?;
         }
+
+        for entity in self.entities.iter() {
+            if entity.entity_type == EntityType::Asteroid {
+                render_asteriod(entity, &mut self.canvas, assets)?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn debug_render(&mut self) {

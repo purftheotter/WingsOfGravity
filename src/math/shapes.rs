@@ -1,6 +1,3 @@
-
-use sdl2::sys::BottomIf;
-
 use crate::components::transform::Transform;
 use crate::math::vec2::Vec2; 
 use crate::math::vec2::project_points;
@@ -17,7 +14,7 @@ impl Circle {
     }
 }
 
-#[derive(Clone,serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 pub struct Polygon {
     pub points: Vec<Vec2>,
 }
@@ -55,7 +52,7 @@ impl Polygon {
 
     }
 
-    pub fn project_polygon(self, axis: Vec2) -> (f32,f32) {
+    pub fn project_polygon(&self, axis: Vec2) -> (f32,f32) {
         project_points(&self.points, axis)
     }
 

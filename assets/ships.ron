@@ -1,7 +1,7 @@
 (
   scout: (
     mass:1.0,
-    moment_of_inertia:1.0,
+    moment_of_inertia:0.5,
 
     thrust:200.0,
     torque:100.0,

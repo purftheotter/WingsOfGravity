@@ -29,9 +29,9 @@ pub fn spawn_player(spawn_point:Vec2, class: ShipClass) -> Entity {
 
 }
 
-pub fn spaw_astroid(spawn_point:Vec2, scale: f32) -> Entity {
+pub fn spaw_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
     Entity {
-        entity_type: EntityType::Astroid,
+        entity_type: EntityType::Asteroid,
         transform: Transform {
             position: spawn_point,
             rotation: 0.0,
@@ -51,6 +51,7 @@ pub fn spaw_astroid(spawn_point:Vec2, scale: f32) -> Entity {
                                Vec2::new(100.0,100.0),
                                Vec2::new(-100.0, 100.0)
                     ]),
+                    offset: Vec2::new(0.0, 0.0),
                     health: 4.0,
                     max_health: 4.0,
                     destroyed: false,
