@@ -1,4 +1,6 @@
 
+use sdl2::sys::BottomIf;
+
 use crate::components::transform::Transform;
 use crate::math::vec2::Vec2; 
 use crate::math::vec2::project_points;
@@ -70,38 +72,21 @@ impl Polygon {
         let center = Vec2::new(
             (min_x + max_x) / 2.0, (min_y+ max_y) / 2.0 );
 
-        //pg1 is the topleft ploygon
-        let mut pg1:Vec<Vec2> = Vec::new();
+        let left = Polygon::new(clip_polygon_left(&self.points, center.x));
+        let right = Polygon::new(clip_polygon_right(&self.points, center.x));
 
-        //pg2 is the topright polygon
-        let mut pg2:Vec<Vec2> = Vec::new();
+        let top_left = Polygon::new(clip_polygon_top(&left.points, center.y));
+        let top_right = Polygon::new(clip_polygon_top(&right.points, center.y));
+        let bottom_left = Polygon::new(clip_polygon_bottom(&left.points, center.y));
+        let bottom_right = Polygon::new(clip_polygon_bottom(&right.points, center.y));
+    
+        [
+            top_left,
+            top_right,
+            bottom_left,
+            bottom_right,
+        ]
 
-        //pg3 is the bottomleft ploygon
-        let mut pg3:Vec<Vec2> = Vec::new();
-
-        //pg4 is the bottomright polygon
-        let mut pg4:Vec<Vec2> = Vec::new();
-
-        for point in &self.points {
-            if point.x <= 0.0 && point.y <= 0.0 {
-                pg1.push(*point);
-            }
-            if point.x >= 0.0 && point.y <= 0.0 {
-                pg2.push(*point);
-            }
-            if point.x <= 0.0 && point.y >= 0.0 {
-                pg3.push(*point);
-            }
-            if point.x >= 0.0 && point.y >= 0.0 {
-                pg4.push(*point);
-            }
-        }
-
-        let pg1:Polygon = Polygon::new(pg1);
-        let pg2:Polygon = Polygon::new(pg2);
-        let pg3:Polygon = Polygon::new(pg3);
-        let pg4:Polygon = Polygon::new(pg4);
-        return [pg1,pg2,pg3,pg4];
     }
 }
 
