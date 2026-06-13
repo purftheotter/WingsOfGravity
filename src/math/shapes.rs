@@ -1,4 +1,9 @@
-use crate::{components::transform::Transform, math::vec2::{Vec2, project_points}};
+
+use crate::components::transform::Transform;
+use crate::math::vec2::Vec2; 
+use crate::math::vec2::project_points;
+use crate::math::vec2::clip_x;
+use crate::math::vec2::clip_y;
 
 pub struct Circle {
     pub radius: f32,
@@ -51,10 +56,6 @@ impl Polygon {
         project_points(&self.points, axis)
     }
 
-    pub fn clip_polygon_left(
-        points: Vec<Vec2>,
-        min_x:f32,
-    )
 
     pub fn subdivide4(&self) -> [Polygon;4] {
         let (min_x,max_x) = project_points(
@@ -70,16 +71,16 @@ impl Polygon {
             (min_x + max_x) / 2.0, (min_y+ max_y) / 2.0 );
 
         //pg1 is the topleft ploygon
-        let mut pg1:Vec<Vec2> = vec![];
+        let mut pg1:Vec<Vec2> = Vec::new();
 
         //pg2 is the topright polygon
-        let mut pg2:Vec<Vec2> = vec![];
+        let mut pg2:Vec<Vec2> = Vec::new();
 
         //pg3 is the bottomleft ploygon
-        let mut pg3:Vec<Vec2> = vec![];
+        let mut pg3:Vec<Vec2> = Vec::new();
 
         //pg4 is the bottomright polygon
-        let mut pg4:Vec<Vec2> = vec![];
+        let mut pg4:Vec<Vec2> = Vec::new();
 
         for point in &self.points {
             if point.x <= 0.0 && point.y <= 0.0 {
@@ -102,4 +103,168 @@ impl Polygon {
         let pg4:Polygon = Polygon::new(pg4);
         return [pg1,pg2,pg3,pg4];
     }
+}
+
+
+pub fn clip_polygon_left(
+    points: &[Vec2],
+    min_x: f32,
+) -> Vec<Vec2> {
+    let mut output = Vec::new();
+
+    for (p1,p2) in points.iter()
+        .zip(points.iter().cycle().skip(1))
+        .take(points.len())
+        {
+
+        let p1_inside = p1.x >= min_x;
+        let p2_inside = p2.x >= min_x;
+
+        match (p1_inside,p2_inside) {
+            (true, true) => {
+                output.push(*p2);
+            }
+            (true,false) => {
+                if let Some(intersection) = clip_x(p1, p2, min_x) {
+                    output.push(intersection);
+                }
+            }
+            (false,true) => {
+                if let Some(intersection) = clip_x(p1, p2, min_x) {
+                    output.push(intersection);
+                }
+                output.push(*p2);
+            }
+            (false, false) => {
+
+            }
+            
+        }
+
+    }
+
+    output
+}
+
+
+pub fn clip_polygon_right(
+    points: &[Vec2],
+    max_x: f32,
+) -> Vec<Vec2> {
+    let mut output = Vec::new();
+
+    for (p1,p2) in points.iter()
+        .zip(points.iter().cycle().skip(1))
+        .take(points.len())
+        {
+        let p1_inside = p1.x <= max_x;
+        let p2_inside = p2.x <= max_x;
+
+        match (p1_inside,p2_inside) {
+            (true, true) => {
+                output.push(*p2);
+            }
+            (true,false) => {
+                if let Some(intersection) = clip_x(p1, p2, max_x) {
+                    output.push(intersection);
+                }
+            }
+            (false,true) => {
+                if let Some(intersection) = clip_x(p1, p2, max_x) {
+                    output.push(intersection);
+                }
+                output.push(*p2);
+
+            }
+            (false, false) => {
+
+            }
+            
+        }
+
+    }
+
+    output
+}
+
+
+pub fn clip_polygon_top(
+    points: &[Vec2],
+    min_y: f32,
+) -> Vec<Vec2> {
+    let mut output = Vec::new();
+
+    for (p1,p2) in points.iter()
+        .zip(points.iter().cycle().skip(1))
+        .take(points.len())
+    {
+        let p1_inside = p1.y >= min_y;
+        let p2_inside = p2.y >= min_y;
+
+        match (p1_inside,p2_inside) {
+            (true, true) => {
+                output.push(*p2);
+            }
+            (true,false) => {
+                if let Some(intersection) = clip_y(p1, p2, min_y) {
+                    output.push(intersection);
+                }
+            }
+            (false,true) => {
+                if let Some(intersection) = clip_y(p1, p2, min_y) {
+                    output.push(intersection);
+                }
+                output.push(*p2);
+
+            }
+            (false, false) => {
+
+            }
+            
+        }
+
+    }
+
+    output
+}
+
+
+pub fn clip_polygon_bottom(
+    points: &[Vec2],
+    max_y: f32,
+) -> Vec<Vec2> {
+    let mut output = Vec::new();
+
+    for (p1,p2) in points.iter()
+        .zip(points.iter().cycle().skip(1))
+        .take(points.len())
+    {
+        let p1_inside = p1.y <= max_y;
+        let p2_inside = p2.y <= max_y;
+
+        match (p1_inside,p2_inside) {
+            (true, true) => {
+                output.push(*p2);
+            }
+            (true,false) => {
+                if let Some(intersection) = clip_y(p1, p2, max_y) {
+                    output.push(intersection);
+                }
+            }
+            (false,true) => {
+                if let Some(intersection) = clip_y(p1, p2, max_y) {
+                    output.push(intersection);
+                }
+                output.push(*p2);
+
+            }
+            (false, false) => {
+
+            }
+            
+        }
+
+    }
+
+    output
 }

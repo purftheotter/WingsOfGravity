@@ -148,10 +148,10 @@ fn transform_points(points: &[Vec2], t: &Transform) -> Vec<Vec2> {
     }).collect()
 }
 
-pub fn clip_right(
-    p1: Vec2,
-    p2: Vec2,
-    max_x: f32,
+pub fn clip_x(
+    p1: &Vec2,
+    p2: &Vec2,
+    boundary_x: f32,
 ) -> Option<Vec2> {
     let delta_x = p2.x - p1.x;
 
@@ -159,7 +159,7 @@ pub fn clip_right(
         return None;
     }
 
-    let t = (max_x - p1.x) / delta_x;
+    let t = (boundary_x - p1.x) / delta_x;
 
     if !(0.0..=1.0).contains(&t) {
         return None;
@@ -167,36 +167,13 @@ pub fn clip_right(
 
     let y = p1.y + t * (p2.y - p1.y);
 
-    Some(Vec2::new(max_x, y))
+    Some(Vec2::new(boundary_x, y))
 }
 
-pub fn clip_left(
-    p1: Vec2,
-    p2: Vec2,
-    min_x:f32,
-) -> Option<Vec2> {
-    let delta_x = p2.x - p1.x;
-
-    if delta_x == 0.0 {
-        return None;;
-    }
-
-    let t =(min_x - p1.x) / delta_x;
-
-    if !(0.0..=1.0).contains(&t) {
-        return None;
-    }
- 
-    let y = p1.y + t * (p2.y - p1.y);
-
-    Some(Vec2::new(min_x, y))
-
-}
-
-pub fn clip_top(
-    p1: Vec2,
-    p2: Vec2,
-    max_y:f32,
+pub fn clip_y(
+    p1: &Vec2,
+    p2: &Vec2,
+    boundary_y: f32,
 ) -> Option<Vec2> {
     let delta_y = p2.y - p1.y;
 
@@ -204,7 +181,7 @@ pub fn clip_top(
         return None;
     }
     
-    let t = (max_y - p1.y) / delta_y;
+    let t = (boundary_y - p1.y) / delta_y;
     
     if !(0.0..=1.0).contains(&t) {
         return None;
@@ -212,25 +189,5 @@ pub fn clip_top(
 
     let x = p1.x + t * (p2.x - p1.x);
 
-    Some(Vec2::new(x, max_y))
-}
-
-pub fn clip_bottom(
-    p1: Vec2,
-    p2: Vec2,
-    min_y:f32,
-) -> Option<Vec2> {
-    let delta_y = p2.y - p1.y;
-    if delta_y == 0.0 {
-        return None;
-    }
-
-    let t = (min_y - p1.y) / delta_y;
-
-    if !(0.0..=1.0).contains(&t) {
-        return None;
-    }
-    let x = p1.x + t * (p2.x - p1.x);
-
-    Some(Vec2::new(x, min_y))
+    Some(Vec2::new(x, boundary_y))
 }
