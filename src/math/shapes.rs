@@ -26,6 +26,7 @@ impl Polygon {
     pub fn new(points: Vec<Vec2>) -> Self {
         Self { points }
     }
+
     pub fn apply_transformation(
         &self,
         transform: &Transform,
@@ -72,13 +73,19 @@ impl Polygon {
         let center = Vec2::new(
             (min_x + max_x) / 2.0, (min_y+ max_y) / 2.0 );
 
-        let left = Polygon::new(clip_polygon_left(&self.points, center.x));
-        let right = Polygon::new(clip_polygon_right(&self.points, center.x));
+        let left = 
+            Polygon::new(clip_polygon_left(&self.points, center.x));
+        let right = 
+            Polygon::new(clip_polygon_right(&self.points, center.x));
 
-        let top_left = Polygon::new(clip_polygon_top(&left.points, center.y));
-        let top_right = Polygon::new(clip_polygon_top(&right.points, center.y));
-        let bottom_left = Polygon::new(clip_polygon_bottom(&left.points, center.y));
-        let bottom_right = Polygon::new(clip_polygon_bottom(&right.points, center.y));
+        let top_left = 
+            Polygon::new(clip_polygon_top(&left.points, center.y));
+        let top_right = 
+            Polygon::new(clip_polygon_top(&right.points, center.y));
+        let bottom_left = 
+            Polygon::new(clip_polygon_bottom(&left.points, center.y));
+        let bottom_right = 
+            Polygon::new(clip_polygon_bottom(&right.points, center.y));
     
         [
             top_left,

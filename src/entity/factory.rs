@@ -1,9 +1,10 @@
-use crate::components::asteroid::Asteroid;
+use crate::components::asteroid::{Asteroid, AsteroidChunk};
 use crate::components::ship::ShipInput;
 use crate::components::velocity::Velocity;
 use crate::components::{ShipComponent, ShipClass};
 use crate::components::transform::Transform;
 use crate::entity::{Entity,EntityType};
+use crate::math::shapes::Polygon;
 use crate::math::vec2::Vec2;
 
 pub fn spawn_player(spawn_point:Vec2, class: ShipClass) -> Entity {
@@ -41,6 +42,23 @@ pub fn spaw_astroid(spawn_point:Vec2, scale: f32) -> Entity {
             angular: 0.0,
         },
         ship_component: None,
-        asteroid: Some(Asteroid { root:  })
+        asteroid: Some(
+            Asteroid {
+                root: AsteroidChunk {
+                    shape: Polygon::new(vec![
+                               Vec2::new(-100.0, -100.0),
+                               Vec2::new(100.0,-100.0),
+                               Vec2::new(100.0,100.0),
+                               Vec2::new(-100.0, 100.0)
+                    ]),
+                    health: 4.0,
+                    max_health: 4.0,
+                    destroyed: false,
+                    depth: 0,
+                    children: None 
+                },
+                max_depth: 2,
+            }
+        )
     }
 }

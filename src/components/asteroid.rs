@@ -1,3 +1,5 @@
+use sdl2::controller::Button::B;
+
 use crate::math::shapes::Polygon;
 
 
@@ -22,15 +24,41 @@ impl AsteroidChunk {
             health,
             max_health: health,
             destroyed: false,
-            children: None, 
+            children: None,
+            depth,
         }
     }
     pub fn subdivide(&mut self) {
         let health = self.max_health;
         let depth = self.depth + 1;
 
-        self.children = Some(
-            Box::new(AsteroidChunk::new(Polygon, health, depth))
-        )
+        let polygon_parts = 
+            self.shape.subdivide4();
+
+        self.children = Some([
+            Box::new(
+                AsteroidChunk::new(
+                    polygon_parts[1].clone(),
+                    health,
+                    depth)),
+            Box::new(
+                AsteroidChunk::new(
+                    polygon_parts[1].clone(),
+                    health,
+                    depth)),
+            Box::new(
+                AsteroidChunk::new(
+                    polygon_parts[1].clone(),
+                    health,
+                    depth)),
+            Box::new(
+                AsteroidChunk::new(
+                    polygon_parts[1].clone(),
+                    health,
+                    depth)),
+
+
+        ])
+
     }
 }
