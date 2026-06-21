@@ -1,5 +1,3 @@
-use std::thread::yield_now;
-
 use sdl2::rect::{Rect,FPoint,FRect};
 use sdl2::render::Canvas;
 use sdl2::video::Window;
@@ -8,7 +6,6 @@ use sdl2::pixels::Color;
 use crate::components::asteroid::AsteroidChunk;
 use crate::components::transform::Transform;
 use crate::math::shapes::Circle;
-use crate::math::vec2::Vec2;
 use crate::rendering::assets::Assets;
 use crate::entity::Entity;
 use crate::assets::ship_database::ShipDatabase;
@@ -68,10 +65,21 @@ pub fn render_chunk(
         for child in children {
             render_chunk(canvas, assets, child, &world_transform)?;
         }
+        
+        render_polygon(canvas, &world_transform, &chunk.shape)?;
+
     }else {
         canvas.set_draw_color(Color::RGB(100, 0, 100));
 
         render_circle(canvas, &world_transform, &Circle::new(5.0))?;
+
+        for point in &chunk.shape.points {
+            let mut point_transform = world_transform;
+            point_transform.position += *point;
+            render_circle(canvas, &point_transform, &Circle::new(5.0))?;
+        }
+
+        render_polygon(canvas, &world_transform, &chunk.shape)?;
     }
 
 

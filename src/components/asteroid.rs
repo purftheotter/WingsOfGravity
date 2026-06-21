@@ -1,4 +1,4 @@
-use crate::math::{shapes::Polygon, vec2::{self, Vec2}};
+use crate::math::{shapes::Polygon, vec2::Vec2};
 
 
 pub struct Asteroid {
@@ -53,25 +53,25 @@ impl AsteroidChunk {
             Box::new(
                 AsteroidChunk::new(
                     polygon_parts[0].clone(),
-                    -size/4.0,
+                    (-size/4.0) + (size/4.0),
                     health,
                     depth)),
             Box::new(
                 AsteroidChunk::new(
                     polygon_parts[1].clone(),
-                    Vec2::new(size.x/4.0, -size.y/4.0),
+                    Vec2::new((size.x/4.0) - (size.x /4.0), (-size.y/4.0) + (size.y/4.0)),
                     health,
                     depth)),
             Box::new(
                 AsteroidChunk::new(
                     polygon_parts[2].clone(),
-                    Vec2::new(-size.x/4.0, size.y/4.0),
+                    Vec2::new(-size.x/4.0 + (size.x/4.0), size.y/4.0 - (size.y/4.0)),
                     health,
                     depth)),
             Box::new(
                 AsteroidChunk::new(
                     polygon_parts[3].clone(),
-                    size/4.0,
+                    size/4.0 - (size/4.0),
                     health,
                     depth)),
 
