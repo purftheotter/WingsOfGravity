@@ -7,7 +7,7 @@ pub fn sat_collision(
     pg1: &Polygon,
     t2: &Transform,
     pg2: &Polygon,
-    ) -> (bool, Option<Vec2>) {
+    ) -> (bool, Option<Vec2>, Option<f32>) {
 
     let wspg1 = pg1.apply_transformation(t1);
     let wspg2 = pg2.apply_transformation(t2);
@@ -26,7 +26,7 @@ pub fn sat_collision(
         let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
-            return (false, None);
+            return (false, None, None);
         }
 
         let axis_depth = f32::min(maxb - mina,maxa - minb);
@@ -54,7 +54,7 @@ pub fn sat_collision(
         let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
-            return (false, None);
+            return (false, None, None);
         }
 
         let axis_depth = f32::min(maxb - mina,maxa - minb);
@@ -72,9 +72,7 @@ pub fn sat_collision(
         }
     }
 
-    let mtv = normal * depth;
-
-    return (true, Some(mtv))
+    return (true, Some(normal), Some(depth))
 }
 
 pub fn two_circle_collision(c1: &Circle,t1: &Transform, c2: &Circle, t2: &Transform) -> bool {

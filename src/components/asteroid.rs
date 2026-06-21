@@ -12,7 +12,7 @@ impl Asteroid {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Vec2>) {
+    ) -> (bool, Option<Vec2>, Option<f32>) {
         self.root.recursive_collide(other, &self_transform, &other_transform)
     }
     
@@ -91,11 +91,11 @@ impl AsteroidChunk {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Vec2>) {
+    ) -> (bool, Option<Vec2>, Option<f32>) {
         if self.destroyed {
-            return (false, None);
+            return (false, None, None);
         }
-        let mut result:(bool, Option<Vec2>) = self.collides(other, self_transform, other_transform);
+        let mut result:(bool, Option<Vec2>, Option<f32>) = self.collides(other, self_transform, other_transform);
 
         if self.children.is_none() {
             return result;
@@ -110,7 +110,7 @@ impl AsteroidChunk {
             }
         }
 
-        result = (false, None);
+        result = (false, None, None);
 
         result
 
@@ -122,7 +122,7 @@ impl AsteroidChunk {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Vec2>) {
+    ) -> (bool, Option<Vec2>, Option<f32>) {
         sat_collision(self_transform, &self.shape, other_transform, other)
     }
     

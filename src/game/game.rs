@@ -248,7 +248,7 @@ impl Game {
             Some(i) => i,
             None => return,
         };
-        let player_transform = self.entities[player_index].transform;
+        let mut player_transform = self.entities[player_index].transform;
         let player_ship = self.entities[player_index].ship_component.as_ref().unwrap();
         let player_ship_stats = self.ship_database.get(player_ship.class);
         let player_hitbox = match &player_ship_stats.hitbox {
@@ -266,14 +266,17 @@ impl Game {
 
             let asteroid = entity.asteroid.as_mut().unwrap();
 
-            let (collided, resolution) = asteroid.collides(
+            let (collided, normal, depth) = asteroid.collides(
                 player_hitbox,
                 &entity.transform,
                 &player_transform,
             );
 
             if collided {
+                let mtv = normal.unwrap() * depth.unwrap();
                 println!("collided");
+                player_transform.position += mtv * 0.5;
+                entity.transform.position -= mtv * 0.5;
             }else {
                 println!("nope")
             }
