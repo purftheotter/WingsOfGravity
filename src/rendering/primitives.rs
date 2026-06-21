@@ -1,5 +1,6 @@
 use crate::components::transform::Transform;
-use crate::math::shapes::{Circle, Polygon};
+use crate::math::shapes::Circle;
+use crate::math::shapes::Polygon;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::rect::FPoint;

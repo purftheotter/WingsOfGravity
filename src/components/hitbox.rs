@@ -1,9 +1,7 @@
-use crate::math::shapes::Polygon;
+use crate::math::shapes::{Circle, Polygon};
 
 #[derive(Clone, serde::Deserialize)]
 pub enum Hitbox {
-    Circle { radius: f32 },
-    Polygon {
-        polygon: Polygon
-    },
+    Circle { circle: Circle },
+    Polygon {polygon: Polygon},
 }

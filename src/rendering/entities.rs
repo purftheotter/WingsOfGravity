@@ -5,11 +5,10 @@ use sdl2::pixels::Color;
 
 use crate::components::asteroid::AsteroidChunk;
 use crate::components::transform::Transform;
-use crate::math::shapes::Circle;
 use crate::rendering::assets::Assets;
 use crate::entity::Entity;
 use crate::assets::ship_database::ShipDatabase;
-use crate::rendering::primitives::{render_circle, render_polygon};
+use crate::rendering::primitives::render_polygon;
 
 
 pub fn render_ship(
@@ -57,21 +56,17 @@ pub fn render_chunk(
     transform: &Transform,
 
     ) -> Result<(),String>{
-
-    let mut world_transform = *transform;
-    world_transform.position += chunk.offset;
-
     if let Some(children) = &chunk.children {
         for child in children {
-            render_chunk(canvas, assets, child, &world_transform)?;
+            render_chunk(canvas, assets, child, &transform)?;
         }
         
-        render_polygon(canvas, &world_transform, &chunk.shape)?;
+        render_polygon(canvas, &transform, &chunk.shape)?;
 
     }else {
         canvas.set_draw_color(Color::RGB(100, 0, 100));
 
-        render_polygon(canvas, &world_transform, &chunk.shape)?;
+        render_polygon(canvas, &transform, &chunk.shape)?;
     }
 
 

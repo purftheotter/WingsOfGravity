@@ -1,4 +1,4 @@
-use crate::math::{shapes::Polygon, vec2::Vec2};
+use crate::{components::transform::Transform, math::{shapes::polygon::Polygon, vec2::Vec2}, systems::collision::sat_collision};
 
 
 pub struct Asteroid {
@@ -6,9 +6,20 @@ pub struct Asteroid {
     pub max_depth: u8,
 }
 
-pub struct  AsteroidChunk {
+impl Asteroid {
+    pub fn collides(
+        &self,
+        other: &Polygon,
+        self_transform: &Transform,
+        other_transform: &Transform,
+    ) -> (bool, Option<Vec2>) {
+        self.root.recursive_collide(other, &self_transform, &other_transform)
+    }
+    
+}
+
+pub struct AsteroidChunk {
     pub shape: Polygon,
-    pub offset: Vec2,
     pub health: f32,
     pub max_health: f32,
     pub destroyed: bool,
@@ -18,10 +29,9 @@ pub struct  AsteroidChunk {
 
 
 impl AsteroidChunk {
-    pub fn new(shape:Polygon, offset: Vec2, health:f32, depth:u8) -> Self {
+    pub fn new(shape:Polygon, health:f32, depth:u8) -> Self {
         Self {
             shape: shape,
-            offset,
             health,
             max_health: health,
             destroyed: false,
@@ -30,7 +40,6 @@ impl AsteroidChunk {
         }
     }
     pub fn subdivide(&mut self, max_depth: u8) {
-        println!("max_depth:{},my depth:{}", max_depth, self.depth);
         if self.depth >= max_depth {
             return;
         }
@@ -42,15 +51,6 @@ impl AsteroidChunk {
             children[3].subdivide(max_depth);
         }else {
 
-            let (min_x_size, max_x_size) = self.shape.project_polygon(Vec2::new(1.0, 0.0));
-
-            let (min_y_size, max_y_size) = self.shape.project_polygon(Vec2::new(0.0, 1.0));
-
-            let size = Vec2::new(
-                max_x_size - min_x_size,
-                max_y_size - min_y_size,
-            );
-
             let health = self.max_health;
             let depth = self.depth + 1;
 
@@ -61,25 +61,21 @@ impl AsteroidChunk {
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[0].clone(),
-                        (-size/4.0) + (size/4.0),
                         health,
                         depth)),
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[1].clone(),
-                        Vec2::new((size.x/4.0) - (size.x /4.0), (-size.y/4.0) + (size.y/4.0)),
                         health,
                         depth)),
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[2].clone(),
-                        Vec2::new(-size.x/4.0 + (size.x/4.0), size.y/4.0 - (size.y/4.0)),
                         health,
                         depth)),
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[3].clone(),
-                        size/4.0 - (size/4.0),
                         health,
                         depth)),
 
@@ -90,4 +86,44 @@ impl AsteroidChunk {
         }
 
     }
+    pub fn recursive_collide(
+        &self,
+        other: &Polygon,
+        self_transform: &Transform,
+        other_transform: &Transform,
+    ) -> (bool, Option<Vec2>) {
+        if self.destroyed {
+            return (false, None);
+        }
+        let mut result:(bool, Option<Vec2>) = self.collides(other, self_transform, other_transform);
+
+        if self.children.is_none() {
+            return result;
+        }else {
+            if let Some(children) = &self.children {
+                for child in children{
+                    result = child.recursive_collide(other, self_transform, other_transform);
+                    if result.0 {
+                        return result;
+                    }
+                }
+            }
+        }
+
+        result = (false, None);
+
+        result
+
+
+    }
+
+    pub fn collides(
+        &self,
+        other: &Polygon,
+        self_transform: &Transform,
+        other_transform: &Transform,
+    ) -> (bool, Option<Vec2>) {
+        sat_collision(self_transform, &self.shape, other_transform, other)
+    }
+    
 }

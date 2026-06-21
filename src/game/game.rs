@@ -13,10 +13,9 @@ use crate::components::ShipClass;
 use crate::components::hitbox::Hitbox;
 
 use crate::entity::EntityType;
-use crate::entity::factory::spaw_asteroid;
+use crate::entity::factory::spawn_asteroid;
 use crate::entity::factory::spawn_player;
 use crate::entity::Entity;
-use crate::math::shapes::Circle;
 use crate::rendering::assets::Assets;
 use crate::rendering::entities::render_asteriod;
 use crate::rendering::primitives::render_circle;
@@ -113,11 +112,15 @@ impl Game {
 
             self.handle_input();
 
-            self.update(dt);
+            self.update_player_velocity(dt);
+
+            self.update_transform(dt);
+
+            self.update_collisions();
 
             self.render(&assets).expect("Render Failed");
 
-            self.debug_render();
+            self.debug_render()?;
 
             self.canvas.present();
         }
@@ -139,7 +142,7 @@ impl Game {
         self.player_index = Some(self.entities.len() -1);
 
         self.entities.push(
-            spaw_asteroid(
+            spawn_asteroid(
                 Vec2::new(400.0, 400.0),
                 1.0,
             )
@@ -209,7 +212,7 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, dt: f32) {
+    pub fn update_player_velocity(&mut self, dt: f32) {
 
         if let Some(player_index) = self.player_index {
             let player = &mut self.entities[player_index];
@@ -231,10 +234,49 @@ impl Game {
                 &dt
             );
 
-            //update transform
+        }
+    }
 
-            apply_velocity(&mut player.transform, &player.velocity, &dt);
+    pub fn update_transform(&mut self, dt: f32) {
+        for entity in self.entities.iter_mut() {
+            apply_velocity(&mut entity.transform, &entity.velocity, &dt);
+        }
+    }
 
+    pub fn update_collisions(&mut self) {
+        let player_index = match self.player_index {
+            Some(i) => i,
+            None => return,
+        };
+        let player_transform = self.entities[player_index].transform;
+        let player_ship = self.entities[player_index].ship_component.as_ref().unwrap();
+        let player_ship_stats = self.ship_database.get(player_ship.class);
+        let player_hitbox = match &player_ship_stats.hitbox {
+            Hitbox::Polygon { polygon } => polygon,
+            _ => return,
+        };
+        for (i, entity) in self.entities.iter_mut().enumerate() {
+            if entity.entity_type != EntityType::Asteroid {
+                continue;
+            }
+
+            if i == player_index {
+                continue;
+            }
+
+            let asteroid = entity.asteroid.as_mut().unwrap();
+
+            let (collided, resolution) = asteroid.collides(
+                player_hitbox,
+                &entity.transform,
+                &player_transform,
+            );
+
+            if collided {
+                println!("collided");
+            }else {
+                println!("nope")
+            }
         }
     }
 
@@ -276,8 +318,10 @@ impl Game {
         Ok(())
     }
 
-    pub fn debug_render(&mut self) {
-        if !self.debug_mode {return;}
+    pub fn debug_render(&mut self) -> Result<(), String> {
+        if !self.debug_mode {
+            return Ok(())
+        }
 
         self.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
@@ -285,12 +329,12 @@ impl Game {
             let player = &mut self.entities[player_index];
 
             match &self.ship_database.get(player.ship_component.as_ref().unwrap().class).hitbox {
-                Hitbox::Circle { radius } => {
+                Hitbox::Circle { circle } => {
                     render_circle(
                         &mut self.canvas,
                         &player.transform,
-                        &Circle::new(*radius),
-                    ).unwrap();
+                        &circle,
+                    )?;
                 }
 
                 Hitbox::Polygon { polygon } => {
@@ -298,11 +342,14 @@ impl Game {
                         &mut self.canvas,
                         &player.transform,
                         &polygon,
-                    ).unwrap();
+                    )?;
                 }
+
             }
 
         }
+
+        Ok(())  
 
     }
 }

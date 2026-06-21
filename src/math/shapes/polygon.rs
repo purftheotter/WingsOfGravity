@@ -6,16 +6,6 @@ use crate::math::vec2::clip_y;
 
 const EPS: f32 = 1e-6;
 
-pub struct Circle {
-    pub radius: f32,
-}
-
-impl Circle {
-    pub fn new(r: f32) -> Self {
-        Self {radius:r}
-    }
-}
-
 #[derive(Clone, serde::Deserialize)]
 pub struct Polygon {
     pub points: Vec<Vec2>,
