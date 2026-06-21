@@ -100,11 +100,6 @@ impl Polygon {
         insert_center(&mut bottom_right, &center);
         let bottom_right_polygon = Polygon::new(bottom_right);
 
-        for point in top_left_polygon.iter() {
-            println!("x:{}, y:{}",point.x,point.y);
-        }
-
-
         [
             top_left_polygon,
             top_right_polygon,

@@ -71,14 +71,6 @@ pub fn render_chunk(
     }else {
         canvas.set_draw_color(Color::RGB(100, 0, 100));
 
-        render_circle(canvas, &world_transform, &Circle::new(5.0))?;
-
-        for point in &chunk.shape.points {
-            let mut point_transform = world_transform;
-            point_transform.position += *point;
-            render_circle(canvas, &point_transform, &Circle::new(5.0))?;
-        }
-
         render_polygon(canvas, &world_transform, &chunk.shape)?;
     }
 

@@ -123,6 +123,7 @@ impl Game {
         }
 
         Ok(())
+            
     }
 
     pub fn load_world(&mut self) {

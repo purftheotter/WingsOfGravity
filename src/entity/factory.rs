@@ -58,7 +58,7 @@ pub fn spaw_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
                     depth: 0,
                     children: None 
                 },
-                max_depth: 2,
+                max_depth: 4,
             }
         )
     }
