@@ -244,41 +244,102 @@ impl Game {
     }
 
     pub fn update_collisions(&mut self) {
-        let player_index = match self.player_index {
-            Some(i) => i,
-            None => return,
-        };
-        let mut player_transform = self.entities[player_index].transform;
-        let player_ship = self.entities[player_index].ship_component.as_ref().unwrap();
-        let player_ship_stats = self.ship_database.get(player_ship.class);
-        let player_hitbox = match &player_ship_stats.hitbox {
-            Hitbox::Polygon { polygon } => polygon,
-            _ => return,
-        };
-        for (i, entity) in self.entities.iter_mut().enumerate() {
-            if entity.entity_type != EntityType::Asteroid {
-                continue;
-            }
+        let player_index = self.player_index.unwrap();
 
+        for i in 0..self.entities.len() {
+ 
             if i == player_index {
                 continue;
             }
+           
 
-            let asteroid = entity.asteroid.as_mut().unwrap();
+            let (player, asteroid_entity) =
+                if i > player_index {
+                    let (left, right) = self.entities.split_at_mut(i);
+
+                    (
+                        &mut left[player_index],
+                        &mut right[0],
+                    )
+                } else {
+                    let (left, right) =
+                        self.entities.split_at_mut(player_index);
+
+                    (
+                        &mut right[0],
+                        &mut left[i],
+                    )
+                };
+    if asteroid_entity.entity_type != EntityType::Asteroid {
+                continue;
+            }
+
+            let player_ship = player
+                .ship_component
+                .as_ref()
+                .unwrap();
+            let player_ship_stats = self
+                .ship_database
+                .get(player_ship.class);
+
+            let player_hitbox = match &player_ship_stats.hitbox {
+                Hitbox::Polygon { polygon } => polygon,
+                _ => return,
+            };
+
+
+            let asteroid = asteroid_entity.asteroid.as_ref().unwrap();
 
             let (collided, normal, depth) = asteroid.collides(
                 player_hitbox,
-                &entity.transform,
-                &player_transform,
+                &asteroid_entity.transform,
+                &player.transform,
             );
 
             if collided {
-                let mtv = normal.unwrap() * depth.unwrap();
-                println!("collided");
-                player_transform.position += mtv * 0.5;
-                entity.transform.position -= mtv * 0.5;
-            }else {
-                println!("nope")
+
+                let normal = normal.unwrap().normalize();
+                let depth = depth.unwrap();
+
+                let restitution = 0.2;
+
+                let relative_velocity = 
+                    player.velocity.linear 
+                    - asteroid_entity.velocity.linear;
+
+                let velocity_along_normal = 
+                    relative_velocity.dot(normal);
+                if velocity_along_normal < 0.0 {
+                    
+
+                    let impulse_magnitude =
+                        -(1.0 + restitution) * velocity_along_normal
+                        / (
+                            1.0 /player_ship_stats.mass 
+                            + 1.0 /asteroid.root.mass
+                        );
+
+                    let impulse = normal * impulse_magnitude;
+
+                    player.velocity.linear += impulse 
+                        / player_ship_stats.mass;
+
+                    asteroid_entity.velocity.linear -=
+                        impulse / asteroid.root.mass;
+
+                }
+
+
+                let mtv = normal * depth;
+                let total_mass = 
+                    player_ship_stats.mass + asteroid.root.mass;
+                player.transform.position += 
+                    mtv * (asteroid.root.mass / total_mass);
+                asteroid_entity.transform.position -= 
+                    mtv * (player_ship_stats.mass / total_mass);
+
+
+                
             }
         }
     }

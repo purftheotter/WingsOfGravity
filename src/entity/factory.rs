@@ -39,7 +39,7 @@ pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
         },
         velocity: Velocity {
             linear: Vec2::new(0.0, 0.0),
-            angular: 10.0,
+            angular: 4.0,
         },
         ship_component: None,
         asteroid: Some(
@@ -51,6 +51,7 @@ pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
                         Vec2::new(100.0, 100.0),
                         Vec2::new(-100.0, 100.0),
                     ]),
+                    mass: 20.0,
                     health: 4.0,
                     max_health: 4.0,
                     destroyed: false,
