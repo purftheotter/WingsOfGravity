@@ -1,13 +1,23 @@
 use crate::components::transform::Transform;
 use crate::math::shapes::{Circle, Polygon};
 use crate::math::vec2::{Vec2, project_points};
+use crate::entity::Entity;
+use crate::entity::EntityType;
+use crate::assets::ship_database::ShipDatabase;
+use crate::components::hitbox::Hitbox;
+use crate::systems::physics::{correct_position_ship_astroid, resolve_ship_asteriod_collisoin};
+
+pub struct Collision {
+    pub normal: Vec2,
+    pub depth: f32,
+}
 
 pub fn sat_collision(
     t1: &Transform,
     pg1: &Polygon,
     t2: &Transform,
     pg2: &Polygon,
-    ) -> (bool, Option<Vec2>, Option<f32>) {
+    ) -> (bool, Option<Collision>) {
 
     let wspg1 = pg1.apply_transformation(t1);
     let wspg2 = pg2.apply_transformation(t2);
@@ -26,7 +36,7 @@ pub fn sat_collision(
         let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
-            return (false, None, None);
+            return (false, None);
         }
 
         let axis_depth = f32::min(maxb - mina,maxa - minb);
@@ -54,7 +64,7 @@ pub fn sat_collision(
         let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
-            return (false, None, None);
+            return (false, None);
         }
 
         let axis_depth = f32::min(maxb - mina,maxa - minb);
@@ -72,7 +82,7 @@ pub fn sat_collision(
         }
     }
 
-    return (true, Some(normal), Some(depth))
+    return (true, Some(Collision { normal, depth }))
 }
 
 pub fn two_circle_collision(c1: &Circle,t1: &Transform, c2: &Circle, t2: &Transform) -> bool {
@@ -89,3 +99,92 @@ pub fn two_circle_collision(c1: &Circle,t1: &Transform, c2: &Circle, t2: &Transf
         false
     }
 }
+
+
+pub fn update_player_collisions(
+    entities: &mut Vec<Entity>,
+    player_index: usize,
+    ship_database: &ShipDatabase,
+) {
+    
+        for i in 0..entities.len() {
+ 
+            if i == player_index {
+                continue;
+            }
+           
+
+            let (player, asteroid_entity) =
+                if i > player_index {
+                    let (left, right) = entities.split_at_mut(i);
+
+                    (
+                        &mut left[player_index],
+                        &mut right[0],
+                    )
+                } else {
+                    let (left, right) =
+                        entities.split_at_mut(player_index);
+
+                    (
+                        &mut right[0],
+                        &mut left[i],
+                    )
+                };
+
+                if asteroid_entity.entity_type != EntityType::Asteroid {
+                continue;
+                }
+
+                let (collided, collision) = ship_asteroid_collision(
+                    player,
+                    asteroid_entity,
+                    ship_database,
+                );
+
+                if collided && collision.is_some(){
+                    resolve_ship_asteriod_collisoin(
+                        collision.as_ref().unwrap(),
+                        asteroid_entity,
+                        player,
+                        &ship_database
+                    );
+                    correct_position_ship_astroid(
+                        collision.as_ref().unwrap(),
+                        asteroid_entity,
+                        player,
+                        &ship_database);
+                }
+
+                
+
+            }
+}
+
+
+pub fn ship_asteroid_collision(
+    ship: &mut Entity,
+    asteroid_entity: &mut Entity,
+    ship_database: &ShipDatabase,
+) -> (bool,Option<Collision>) {
+
+    let ship_component = ship
+        .ship_component
+        .as_ref()
+        .unwrap();
+    let ship_component_stats = ship_database.get(ship_component.class);
+
+    let ship_hitbox = match &ship_component_stats.hitbox {Hitbox::Polygon { polygon } => polygon,_ => return (false,None),};
+
+
+    let asteroid = asteroid_entity.asteroid.as_ref().unwrap();
+
+    asteroid.collides(
+        ship_hitbox,
+        &asteroid_entity.transform,
+        &ship.transform,
+    )
+        
+}
+
+

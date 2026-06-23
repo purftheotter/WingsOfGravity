@@ -15,7 +15,7 @@ pub struct ShipComponent {
 #[derive(serde::Deserialize)]
 pub struct ShipStats {
     pub mass: f32,
-    pub moment_of_inertia: f32,
+    pub inertia: f32,
 
     pub thrust: f32,
     pub torque: f32,

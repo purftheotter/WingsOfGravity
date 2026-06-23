@@ -1,4 +1,4 @@
-use crate::{components::transform::Transform, math::{shapes::polygon::Polygon, vec2::Vec2}, systems::collision::sat_collision};
+use crate::{components::transform::Transform, math::{shapes::polygon::Polygon, vec2::Vec2}, systems::collision::{Collision, sat_collision}};
 
 
 pub struct Asteroid {
@@ -12,7 +12,7 @@ impl Asteroid {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Vec2>, Option<f32>) {
+    ) -> (bool, Option<Collision>) {
         self.root.recursive_collide(other, &self_transform, &other_transform)
     }
     
@@ -21,6 +21,7 @@ impl Asteroid {
 pub struct AsteroidChunk {
     pub shape: Polygon,
     pub mass: f32,
+    pub inertia: f32,
     pub health: f32,
     pub max_health: f32,
     pub destroyed: bool,
@@ -34,6 +35,7 @@ impl AsteroidChunk {
         Self {
             shape: shape,
             mass:mass,
+            inertia: mass * 2.0,
             health,
             max_health: health,
             destroyed: false,
@@ -98,9 +100,9 @@ impl AsteroidChunk {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Vec2>, Option<f32>) {
+    ) -> (bool, Option<Collision>) {
         if self.destroyed {
-            return (false, None, None);
+            return (false, None);
         }
 
         if let Some(children) = &self.children {
@@ -122,7 +124,7 @@ impl AsteroidChunk {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Vec2>, Option<f32>) {
+    ) -> (bool, Option<Collision>) {
         sat_collision(self_transform, &self.shape, other_transform, other)
     }
     

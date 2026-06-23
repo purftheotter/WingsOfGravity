@@ -1,7 +1,7 @@
 (
   scout: (
     mass:1.0,
-    moment_of_inertia:0.5,
+    inertia:0.5,
 
     thrust:200.0,
     torque:100.0,
@@ -23,7 +23,7 @@
 
     fighter: (
     mass:2.0,
-    moment_of_inertia:1.0,
+    inertia:1.0,
 
     thrust:600.0,
     torque:150.0,
@@ -43,7 +43,7 @@
   ),
     freighter: (
     mass:8.0,
-    moment_of_inertia:20.0,
+    inertia:20.0,
 
     thrust:200.0,
     torque:150.0,

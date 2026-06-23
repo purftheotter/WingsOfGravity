@@ -44,20 +44,13 @@ pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
         ship_component: None,
         asteroid: Some(
             Asteroid {
-                root: AsteroidChunk {
-                    shape: Polygon::new(vec![
-                        Vec2::new(-100.0, -100.0),
-                        Vec2::new(100.0, -100.0),
-                        Vec2::new(100.0, 100.0),
-                        Vec2::new(-100.0, 100.0),
-                    ]),
-                    mass: 20.0,
-                    health: 4.0,
-                    max_health: 4.0,
-                    destroyed: false,
-                    depth: 0,
-                    children: None 
-                },
+                root: AsteroidChunk::new(
+                          Polygon::new(vec![
+                            Vec2::new(-100.0, -100.0),
+                            Vec2::new(100.0, -100.0),
+                            Vec2::new(100.0, 100.0),
+                            Vec2::new(-100.0, 100.0),
+                          ]), 4.0, 10.0, 0),
                 max_depth: 4,
             }
         )
