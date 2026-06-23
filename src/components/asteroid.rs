@@ -12,7 +12,7 @@ impl Asteroid {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Collision>) {
+    ) -> Option<Collision> {
         self.root.recursive_collide(other, &self_transform, &other_transform)
     }
     
@@ -20,8 +20,6 @@ impl Asteroid {
 
 pub struct AsteroidChunk {
     pub shape: Polygon,
-    pub mass: f32,
-    pub inertia: f32,
     pub health: f32,
     pub max_health: f32,
     pub destroyed: bool,
@@ -31,11 +29,9 @@ pub struct AsteroidChunk {
 
 
 impl AsteroidChunk {
-    pub fn new(shape:Polygon, health:f32, mass:f32, depth:u8) -> Self {
+    pub fn new(shape:Polygon, health:f32, depth:u8) -> Self {
         Self {
             shape: shape,
-            mass:mass,
-            inertia: mass * 2.0,
             health,
             max_health: health,
             destroyed: false,
@@ -55,7 +51,6 @@ impl AsteroidChunk {
             children[3].subdivide(max_depth);
         }else {
 
-            let mass = self.mass/4.0;
             let health = self.max_health;
             let depth = self.depth + 1;
 
@@ -66,25 +61,21 @@ impl AsteroidChunk {
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[0].clone(),
-                        mass,
                         health,
                         depth)),
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[1].clone(),
-                        mass,
                         health,
                         depth)),
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[2].clone(),
-                        mass,
                         health,
                         depth)),
                 Box::new(
                     AsteroidChunk::new(
                         polygon_parts[3].clone(),
-                        mass,
                         health,
                         depth)),
 
@@ -100,16 +91,16 @@ impl AsteroidChunk {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Collision>) {
+    ) -> Option<Collision> {
         if self.destroyed {
-            return (false, None);
+            return None;
         }
 
         if let Some(children) = &self.children {
             // search children first (we want smallest chunks)
             for child in children {
                 let result = child.recursive_collide(other, self_transform, other_transform);
-                if result.0 {
+                if result.is_some() {
                     return result;
                 }
             }
@@ -124,7 +115,7 @@ impl AsteroidChunk {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> (bool, Option<Collision>) {
+    ) -> Option<Collision> {
         sat_collision(self_transform, &self.shape, other_transform, other)
     }
     

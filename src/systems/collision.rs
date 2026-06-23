@@ -5,7 +5,7 @@ use crate::entity::Entity;
 use crate::entity::EntityType;
 use crate::assets::ship_database::ShipDatabase;
 use crate::components::hitbox::Hitbox;
-use crate::systems::physics::{correct_position_ship_astroid, resolve_ship_asteriod_collisoin};
+use crate::systems::physics::{correct_position_ship_astroid, resolve_collisoin};
 
 pub struct Collision {
     pub normal: Vec2,
@@ -17,7 +17,7 @@ pub fn sat_collision(
     pg1: &Polygon,
     t2: &Transform,
     pg2: &Polygon,
-    ) -> (bool, Option<Collision>) {
+    ) -> Option<Collision>{
 
     let wspg1 = pg1.apply_transformation(t1);
     let wspg2 = pg2.apply_transformation(t2);
@@ -36,7 +36,7 @@ pub fn sat_collision(
         let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
-            return (false, None);
+            return None;
         }
 
         let axis_depth = f32::min(maxb - mina,maxa - minb);
@@ -64,7 +64,7 @@ pub fn sat_collision(
         let (minb, maxb) = project_points(&wspg2.points, axis);
 
         if maxa < minb || maxb < mina {
-            return (false, None);
+            return None;
         }
 
         let axis_depth = f32::min(maxb - mina,maxa - minb);
@@ -82,7 +82,7 @@ pub fn sat_collision(
         }
     }
 
-    return (true, Some(Collision { normal, depth }))
+    return Some(Collision { normal, depth })
 }
 
 pub fn two_circle_collision(c1: &Circle,t1: &Transform, c2: &Circle, t2: &Transform) -> bool {
@@ -114,7 +114,7 @@ pub fn update_player_collisions(
             }
            
 
-            let (player, asteroid_entity) =
+            let (mut player, mut asteroid) =
                 if i > player_index {
                     let (left, right) = entities.split_at_mut(i);
 
@@ -132,28 +132,25 @@ pub fn update_player_collisions(
                     )
                 };
 
-                if asteroid_entity.entity_type != EntityType::Asteroid {
+                if asteroid.entity_type != EntityType::Asteroid {
                 continue;
                 }
 
-                let (collided, collision) = ship_asteroid_collision(
-                    player,
-                    asteroid_entity,
+                if let Some(collision) = ship_asteroid_collision(
+                    &mut player,
+                    &mut asteroid,
                     ship_database,
-                );
+                ){
 
-                if collided && collision.is_some(){
-                    resolve_ship_asteriod_collisoin(
-                        collision.as_ref().unwrap(),
-                        asteroid_entity,
-                        player,
-                        &ship_database
-                    );
+                    resolve_collisoin(
+                        &collision,
+                        &mut asteroid,
+                        &mut player,
+                        );
                     correct_position_ship_astroid(
-                        collision.as_ref().unwrap(),
-                        asteroid_entity,
-                        player,
-                        &ship_database);
+                        &collision,
+                        asteroid,
+                        player,);
                 }
 
                 
@@ -166,7 +163,7 @@ pub fn ship_asteroid_collision(
     ship: &mut Entity,
     asteroid_entity: &mut Entity,
     ship_database: &ShipDatabase,
-) -> (bool,Option<Collision>) {
+) -> Option<Collision> {
 
     let ship_component = ship
         .ship_component
@@ -174,7 +171,7 @@ pub fn ship_asteroid_collision(
         .unwrap();
     let ship_component_stats = ship_database.get(ship_component.class);
 
-    let ship_hitbox = match &ship_component_stats.hitbox {Hitbox::Polygon { polygon } => polygon,_ => return (false,None),};
+    let ship_hitbox = match &ship_component_stats.hitbox {Hitbox::Polygon { polygon } => polygon,_ => return None,};
 
 
     let asteroid = asteroid_entity.asteroid.as_ref().unwrap();

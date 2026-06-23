@@ -222,16 +222,16 @@ impl Game {
 
             //update velocity
             apply_forward_thrust(
-                &mut player.velocity,
+                &mut player.rigidbody.velocity,
                 &player.transform.rotation,
                 &(player_ship_stats.thrust * player_ship.input.thrust),
-                &player_ship_stats.mass,
+                &player.rigidbody.mass,
                 &dt
             );
             apply_torque(
-                &mut player.velocity,
+                &mut player.rigidbody.velocity,
                 &(player_ship_stats.torque * player_ship.input.turn),
-                &player_ship_stats.inertia,
+                &player.rigidbody.inertia,
                 &dt
             );
 
@@ -240,7 +240,7 @@ impl Game {
 
     pub fn update_transform(&mut self, dt: f32) {
         for entity in self.entities.iter_mut() {
-            apply_velocity(&mut entity.transform, &entity.velocity, &dt);
+            apply_velocity(&mut entity.transform, &entity.rigidbody.velocity, &dt);
         }
     }
 

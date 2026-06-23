@@ -1,4 +1,5 @@
 use crate::components::asteroid::{Asteroid, AsteroidChunk};
+use crate::components::rigidbody::RigidBody;
 use crate::components::ship::ShipInput;
 use crate::components::velocity::Velocity;
 use crate::components::{ShipComponent, ShipClass};
@@ -18,7 +19,16 @@ pub fn spawn_player(spawn_point:Vec2, class: ShipClass) -> Entity {
             rotation: 0.0,
             scale: Vec2::new(2.0, 2.0),
         },
-        velocity: Velocity { linear: Vec2::new(0.0,0.0),angular: 0.0 },
+
+        rigidbody: RigidBody {
+            mass: 1.0,
+            inertia: 0.5,
+            velocity: Velocity {
+                linear: Vec2::new(0.0, 0.0),
+                angular: 0.0,
+            },
+        },
+
         ship_component: Some(ShipComponent {
             class: class,
             input: ShipInput::new(),
@@ -37,9 +47,13 @@ pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
             rotation: 0.0,
             scale: Vec2::new(scale,scale),
         },
-        velocity: Velocity {
-            linear: Vec2::new(0.0, 0.0),
-            angular: 4.0,
+        rigidbody: RigidBody {
+            mass: 10.0,
+            inertia: 5.0,
+            velocity: Velocity {
+                linear: Vec2::new(0.0, 0.0),
+                angular: 0.0,
+            }
         },
         ship_component: None,
         asteroid: Some(
@@ -50,7 +64,7 @@ pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
                             Vec2::new(100.0, -100.0),
                             Vec2::new(100.0, 100.0),
                             Vec2::new(-100.0, 100.0),
-                          ]), 4.0, 10.0, 0),
+                          ]), 4.0, 0),
                 max_depth: 4,
             }
         )
