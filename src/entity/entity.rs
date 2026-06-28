@@ -3,7 +3,7 @@ use crate::components::transform::Transform;
 use crate::components::ship::ShipComponent;
 use crate::components::asteroid::Asteroid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EntityType {
     Ship,
     Asteroid,

@@ -138,6 +138,7 @@ impl Game {
                     self.screen_height as f32 /2.0
                 ),
                 ShipClass::Scout,
+                &self.ship_database
             )
         );
         self.player_index = Some(self.entities.len() -1);

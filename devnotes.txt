@@ -1,0 +1,7 @@
+A to its point AP is r^AP
+B to its point BP is r^BP
+
+velocity of AP is v^AP
+velocity of AB is v^BP
+
+

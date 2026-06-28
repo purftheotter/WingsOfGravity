@@ -28,7 +28,7 @@ pub fn render_ship(
                 texture.query().width as f32 * entity.transform.scale.x,
                 texture.query().height as f32 * entity.transform.scale.y,
                 ),
-            entity.transform.rotation as f64,
+            entity.transform.rotation.to_degrees() as f64,
             FPoint::new(
                 (texture.query().width as f32 * entity.transform.scale.x) / 2.0,
                 (texture.query().height as f32 * entity.transform.scale.y) / 2.0,

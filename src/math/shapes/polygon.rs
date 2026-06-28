@@ -24,8 +24,7 @@ impl Polygon {
         &self,
         transform: &Transform,
     ) -> Polygon {
-        let rotation = transform.rotation.to_radians();
-        let (sin,cos) = rotation.sin_cos();
+        let (sin,cos) = transform.rotation.sin_cos();
 
         let points = self.points
             .iter()

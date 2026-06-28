@@ -117,6 +117,7 @@ impl Vec2 {
         }
         self / len
     }
+
 }
 
 pub fn dot_product(v1: &Vec2, v2: &Vec2) -> f32 {(v1.x * v2.x) + (v1.y * v2.x)}
@@ -190,4 +191,13 @@ pub fn clip_y(
     let x = p1.x + t * (p2.x - p1.x);
 
     Some(Vec2::new(x, boundary_y))
+}
+
+
+pub fn cross(a: Vec2, b: Vec2) -> f32 {
+    a.x * b.y - a.y * b.x
+}
+
+pub fn perpendicular(v: Vec2) -> Vec2 {
+    Vec2::new(-v.y, v.x)
 }
