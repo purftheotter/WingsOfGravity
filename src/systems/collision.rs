@@ -1,5 +1,5 @@
 use crate::components::transform::Transform;
-use crate::math::shapes::circle::project_circle;
+use crate::math::shapes::circle::{self, project_circle};
 use crate::math::shapes::{Circle, Polygon};
 use crate::math::shapes::polygon::{
     find_cloesest_point,
@@ -8,7 +8,7 @@ use crate::math::shapes::polygon::{
     clip_incident_to_reference,
     remove_duplicates,
 };
-use crate::math::vec2::Vec2;
+use crate::math::vec2::{Vec2, distance};
 use crate::entity::Entity;
 use crate::entity::EntityType;
 use crate::assets::ship_database::ShipDatabase;
@@ -151,19 +151,32 @@ pub fn sat_collision_pg_cir(
    
 }
 
-pub fn two_circle_collision(c1: &Circle,t1: &Transform, c2: &Circle, t2: &Transform) -> bool {
-    let dx = t1.position.x - t2.position.x;
-    let dy = t1.position.y - t2.position.y;
+pub fn two_circle_collision(
+    c1: &Circle, t1: &Transform,
+    c2: &Circle, t2: &Transform,
+) -> Option<Collision> {
+    let diff = t2.position - t1.position;
+    let distance = diff.length();
+    let radius_sum = c1.radius + c2.radius;
 
-    let distance_sqaured = dx * dx + dy * dy;
-
-    let radius_sum = c1.radius + c2.radius; 
-    
-    if distance_sqaured <= radius_sum * radius_sum{
-        true
-    }else {
-        false
+    if distance > radius_sum {
+        return None;
     }
+
+    let normal = if distance == 0.0 {
+        Vec2::new(1.0, 0.0)
+    } else {
+        diff / distance
+    };
+
+    let depth = radius_sum - distance;
+    let contact_point = t1.position + normal * c1.radius;
+
+    Some(Collision {
+        normal,
+        depth,
+        points: vec![contact_point],
+    })
 }
 
 
