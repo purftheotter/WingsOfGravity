@@ -104,6 +104,11 @@ impl AsteroidChunk {
             return None;
         }
 
+        let collision: Option<Collision> = match self.collides(other, self_transform, other_transform) {
+            Some(c) => Some(c),
+            None => return None, 
+        };
+
         if let Some(children) = &self.children {
             for child in children {
                 let result = child.recursive_collide(other, self_transform, other_transform);
@@ -111,9 +116,12 @@ impl AsteroidChunk {
                     return result;
                 }
             }
+        }else {
+            return collision;
         }
 
-        self.collides(other, self_transform, other_transform)
+        return None;
+
     }
 
     pub fn collides(

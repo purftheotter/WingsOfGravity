@@ -135,19 +135,6 @@ pub fn correct_position(
 
     entity1.transform.position -= correction * inv_mass1;
     entity2.transform.position += correction * inv_mass2;
-
-    /*
-    let point = match collision.points.first() {
-        Some(&p) => p,
-        None => return,
-    };
-
-    let r1 = point - entity1.transform.position;
-    let r2 = point - entity2.transform.position;
-
-    entity1.transform.rotation -= cross(r1, correction) * inv_mass1 / entity1.rigidbody.inertia;
-    entity2.transform.rotation += cross(r2, correction) * inv_mass2 / entity2.rigidbody.inertia;
-    */
 }
 
 pub fn polygon_inertia(mass: &f32, polygon: &Polygon) -> f32 {
