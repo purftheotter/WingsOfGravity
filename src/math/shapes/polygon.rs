@@ -1,5 +1,6 @@
 use crate::components::transform::Transform;
 use crate::math::vec2::Vec2; 
+use crate::math::vec2::distance;
 use crate::math::vec2::project_points;
 use crate::math::vec2::clip_x;
 use crate::math::vec2::clip_y;
@@ -46,12 +47,6 @@ impl Polygon {
         Polygon::new(points)
 
     }
-
-    pub fn project_polygon(&self, axis: Vec2) -> (f32,f32) {
-        project_points(&self.points, axis)
-    }
-
-    
 
     pub fn subdivide4(&self) -> [Polygon;4] {
         let (min_x,max_x) = project_points(
@@ -292,3 +287,114 @@ fn is_vertical(p: Vec2, cx: f32) -> bool {
 fn is_horizontal(p: Vec2, cy: f32) -> bool {
     (p.y - cy).abs() < EPS
 }
+
+pub fn remove_duplicates(points: Vec<Vec2>) -> Vec<Vec2> {
+    const DIST_THRESHOLD: f32 = 0.1;
+    let mut result: Vec<Vec2> = Vec::new();
+
+    for point in points {
+        let is_duplicate = result
+            .iter()
+            .any(|&q| (point-q).length_sq() < DIST_THRESHOLD * DIST_THRESHOLD);
+        if !is_duplicate {
+            result.push(point);
+        }
+    }
+    result
+}
+
+pub fn find_reference_edge_and_incident(
+    pg1: &Polygon,
+    pg2: &Polygon,
+    normal: Vec2,
+) -> ([Vec2; 2], Vec<Vec2>) {
+    let ref_edge = best_edge(pg1, normal);
+
+    let inc_edge = best_edge(pg2, -normal);
+
+    (ref_edge, inc_edge.to_vec())
+}
+
+fn best_edge(pg: &Polygon, dir: Vec2) -> [Vec2; 2] {
+    let mut best_dot = f32::NEG_INFINITY;
+    let mut best_i = 0;
+    for i in 0..pg.points.len() {
+        let va = pg.points[i];
+        let vb = pg.points[(i + 1) % pg.points.len()];
+        let edge_normal = (vb - va).normal().normalize();
+        let d = edge_normal.dot(dir);
+        if d > best_dot {
+            best_dot = d;
+            best_i = i;
+        }
+    }
+    [pg.points[best_i], pg.points[(best_i + 1) % pg.points.len()]]
+}
+
+pub fn clip_incident_to_reference(ref_edge: [Vec2; 2], incident: Vec<Vec2>) -> Vec<Vec2> {
+    let ref_dir = (ref_edge[1] - ref_edge[0]).normalize();
+    let ref_normal = -ref_dir.normal();
+ 
+    // Clip against the two side planes (perpendicular to the edge at each endpoint)
+    let output = clip_to_halfplane(incident, ref_edge[0], ref_dir);
+    let output = clip_to_halfplane(output, ref_edge[1], -ref_dir);
+ 
+    // Keep only points on the penetrating side of the reference face
+    output
+        .into_iter()
+        .filter(|&p| (p - ref_edge[0]).dot(ref_normal) <= 0.0)
+        .collect()
+}
+
+pub fn clip_to_halfplane(points: Vec<Vec2>, plane_point: Vec2, plane_normal: Vec2) -> Vec<Vec2> {
+    let mut output = Vec::new();
+    let n = points.len();
+    if n < 2 {
+        return output;
+    }
+
+    for i in 0..n -1{
+        let a = points[i];
+        let b = points[i + 1];
+        let da = (a - plane_point).dot(plane_normal);
+        let db = (b - plane_point).dot(plane_normal);
+        if da >= 0.0 {
+            output.push(a);
+        }
+        if (da >= 0.0) != (db >= 0.0) {
+            let t = da / (da - db);
+            output.push(a + (b - a) * t);
+        }
+    }
+
+    if let Some(&last) = points.last() {
+        let d = (last - plane_point).dot(plane_normal);
+        if d >= 0.0 {
+            output.push(last);
+        }
+    }
+    output
+}
+
+
+pub fn project_polygon(polygon: &Polygon, axis: Vec2) -> (f32,f32) {
+    project_points(&polygon.points, axis)
+}
+
+pub fn find_cloesest_point(target:Vec2, polygon: &Polygon) -> usize {
+    let mut result:usize = 0;
+    let mut min_distance = f32::MAX;
+
+    for i in 0..polygon.points.len() {
+        let vert  = polygon.points[i];
+        let distance = distance(vert, target);
+
+        if distance < min_distance {
+            min_distance = distance;
+            result = i;
+        }
+    }
+
+    result
+
+}   

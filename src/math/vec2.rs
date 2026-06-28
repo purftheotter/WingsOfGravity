@@ -120,6 +120,10 @@ impl Vec2 {
 
 }
 
+pub fn distance(v1:Vec2, v2:Vec2) -> f32 {
+    (v1 - v2).length()
+}
+
 pub fn dot_product(v1: &Vec2, v2: &Vec2) -> f32 {(v1.x * v2.x) + (v1.y * v2.x)}
 
 pub fn project_points(points: &[Vec2], axis: Vec2) -> (f32, f32) {

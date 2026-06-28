@@ -1,4 +1,4 @@
-use crate::{components::transform::Transform, math::{shapes::polygon::Polygon, vec2::Vec2}, systems::{collision::{Collision, sat_collision}, physics::polygon_inertia}};
+use crate::{components::transform::Transform, math::{shapes::polygon::Polygon}, systems::{collision::{Collision, sat_collision_pg_pg}, physics::polygon_inertia}};
 
 
 pub struct Asteroid {
@@ -122,7 +122,7 @@ impl AsteroidChunk {
         self_transform: &Transform,
         other_transform: &Transform,
     ) -> Option<Collision> {
-        sat_collision(self_transform, &self.shape, other_transform, other)
+        sat_collision_pg_pg(self_transform, &self.shape, other_transform, other)
     }
 
     pub fn recursive_get_inertia(
