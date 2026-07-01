@@ -4,7 +4,6 @@ use crate::math::vec2::distance;
 use crate::math::vec2::project_points;
 use crate::math::vec2::clip_x;
 use crate::math::vec2::clip_y;
-
 const EPS: f32 = 1e-6;
 
 #[derive(Clone, serde::Deserialize)]
@@ -15,10 +14,6 @@ pub struct Polygon {
 impl Polygon {
     pub fn new(points: Vec<Vec2>) -> Self {
         Self { points }
-    }
-
-    pub fn iter(&self) -> std::slice::Iter<'_, Vec2> {
-        self.points.iter()
     }
 
     pub fn apply_transformation(

@@ -1,9 +1,18 @@
-use crate::{components::transform::Transform, math::{shapes::polygon::Polygon}, systems::{collision::{Collision, sat_collision_pg_pg}, physics::polygon_inertia}};
 
+use sdl2::render::Canvas;
+use sdl2::video::Window;
+
+use crate::components::transform::Transform;
+use crate::math::shapes::polygon::Polygon;
+use crate::math::vec2::Vec2;
+use crate::rendering::primitives::render_filled_polygon;
+use crate::systems::collision::{Collision, sat_collision_pg_pg};
+use crate::systems::physics::polygon_inertia;
 
 pub struct Asteroid {
     pub root: AsteroidChunk,
     pub max_depth: u8,
+    pub texture_mask_id: Option<String>,
 }
 
 impl Asteroid {
@@ -22,6 +31,21 @@ impl Asteroid {
         transform: &Transform
     )-> Option<f32>{
         self.root.recursive_get_inertia(mass, transform)
+    }
+
+    pub fn get_mask_texture(
+        &self,
+        canvas: &mut Canvas<Window>,
+        bounds_min:&Vec2,
+        bounds_max:&Vec2,
+        tex_size:u32,
+    ){
+        self.root.recursive_chunk_to_mask(
+            canvas,
+            bounds_min,
+            bounds_max,
+            tex_size,
+        );
     }
     
 }
@@ -157,5 +181,46 @@ impl AsteroidChunk {
 
         Some(polygon_inertia(&self_mass, &self.shape.apply_transformation(self_transform)))
     }
+
+    pub fn recursive_chunk_to_mask(
+        &self,
+        canvas:&mut Canvas<Window>,
+        bounds_min: &Vec2,
+        bounds_max: &Vec2,
+        tex_size: u32,
+    ) {
+        if self.destroyed {return}
+
+        if let Some(children) = &self.children {
+            for child in children {
+                child.recursive_chunk_to_mask(
+                    canvas,
+                    bounds_min,
+                    bounds_max,
+                    tex_size,
+                );
+            }
+        }else {
+            let points: Vec<Vec2> = self.shape.points.iter()
+            .map(|p| {
+                let tx = (p.x - bounds_min.x) / (bounds_max.x - bounds_min.x) * tex_size as f32;
+                let ty = (p.y - bounds_min.y) / (bounds_max.y - bounds_min.y) * tex_size as f32;
+                Vec2::new(tx, ty)
+            })
+            .collect();
+
+            let scaled_polygon = Polygon::new(points);
+
+            let _ = render_filled_polygon(
+                canvas,
+                &Transform {
+                    position: Vec2::new(0.0, 0.0),
+                    rotation: 0.0,
+                    scale: Vec2::new(1.0, 1.0) },
+                    &scaled_polygon,
+                    );
+        }
+    }
     
 }
+

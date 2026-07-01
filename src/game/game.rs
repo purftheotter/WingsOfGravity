@@ -4,23 +4,28 @@ use sdl2::keyboard::Scancode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
+use sdl2::render::TextureCreator;
 use sdl2::video::Window;
 use sdl2::EventPump;
+use sdl2::video::WindowContext;
 use std::time::Instant;
 
 use crate::assets::ship_database::ShipDatabase;
 use crate::components::ShipClass;
 use crate::components::hitbox::Hitbox;
+use crate::components::projectile::ProjectileType;
 
 use crate::entity::EntityType;
 use crate::entity::factory::spawn_asteroid;
 use crate::entity::factory::spawn_player;
 use crate::entity::Entity;
+use crate::entity::factory::spawn_prjectile;
 use crate::rendering::assets::Assets;
-use crate::rendering::entities::render_asteriod;
+use crate::rendering::entities::render_asteroid;
 use crate::rendering::primitives::render_circle;
 use crate::rendering::primitives::render_polygon;
 use crate::rendering::entities::render_ship;
+use crate::rendering::entities::build_asteroid_mask;
 use crate::systems::collision;
 use crate::systems::physics::{apply_forward_thrust,apply_torque,apply_velocity};
 use crate::math::vec2::Vec2;
@@ -32,6 +37,7 @@ pub struct Game {
     pub screen_width: u32,
     pub screen_height: u32,
     pub debug_mode: bool,
+    pub next_entity_id: usize,
     pub entities: Vec<Entity>,
     pub player_index: Option<usize>,
     pub ship_database: ShipDatabase,
@@ -69,6 +75,9 @@ impl Game {
         //make ship database
         let ship_database = ShipDatabase::load().expect("Failing while trying to load ShipDatabase");
 
+        //next_entity_id
+        let next_entity_id:usize = 0;
+
         //entities
         let entities = vec![];
 
@@ -76,6 +85,7 @@ impl Game {
         Ok(Self {
             canvas,
             event_pump,
+            next_entity_id,
             entities,
             running: true,
             screen_width,
@@ -88,17 +98,15 @@ impl Game {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-
-        self.load_world();
-
         //texture creator
         let texture_creator = self.canvas.texture_creator();
 
         //making assets
         let mut assets = Assets::new();
 
-        //loading the textures for my assets
-        assets.load_texture(&texture_creator, "fighter", "assets/textures/fighter.png")?;
+        self.load_textures(&mut assets, &texture_creator)?;
+
+        self.load_world(&mut assets, &texture_creator)?;
 
         //setup for making the loop run at a consistent rate
         let mut last_frame = Instant::now();
@@ -112,6 +120,8 @@ impl Game {
             last_frame = current_frame;
 
             self.handle_input();
+
+            self.spawn_projectiles();
 
             self.update_player_velocity(dt);
 
@@ -127,12 +137,38 @@ impl Game {
         }
 
         Ok(())
-            
     }
 
-    pub fn load_world(&mut self) {
+    pub fn load_textures(
+        &mut self,
+        assets: &mut Assets,
+        texture_creator: &TextureCreator<WindowContext>,
+    ) -> Result<(), String> {
+        assets.load_texture(
+            texture_creator,
+            "fighter",
+            "assets/textures/fighter.png"
+        )?;
+
+        assets.load_texture(
+            texture_creator,
+            "asteroid",
+            "assets/textures/asteroid.png"
+        )?;
+
+        Ok(())
+    }
+
+    pub fn load_world(
+        &mut self,
+        assets: &mut Assets,
+        texture_creator: &TextureCreator<WindowContext>
+        ) -> Result<(), String> {
+
+        //spawn_player
         self.entities.push(
             spawn_player(
+                self.next_entity_id,
                 Vec2::new(
                     self.screen_width as f32 /2.0,
                     self.screen_height as f32 /2.0
@@ -141,18 +177,40 @@ impl Game {
                 &self.ship_database
             )
         );
-        self.player_index = Some(self.entities.len() -1);
+        self.player_index = Some(self.next_entity_id);
 
-        self.entities.push(
-            spawn_asteroid(
-                Vec2::new(400.0, 400.0),
-                1.0,
-            )
+        self.next_entity_id += 1;
+
+        //spawn_asteroid
+        let mut asteroid_entity = spawn_asteroid(
+            self.next_entity_id,
+            Vec2::new(400.0, 400.0),
+            1.0,
         );
+
+        self.next_entity_id += 1;
+
+        let mask_id = format!(
+            "asteroid_mask{}",
+            asteroid_entity.entity_id
+        );
+        
+        let mask = build_asteroid_mask(
+            &mut self.canvas,
+            texture_creator,
+            asteroid_entity.asteroid.as_ref().unwrap(),
+        )?;
+
+        assets.insert_texture(&mask_id, mask);
+
+        asteroid_entity.asteroid.as_mut().unwrap().texture_mask_id = Some(mask_id);
+
+        self.entities.push(asteroid_entity);
+
+        Ok(())
     }
 
     pub fn handle_input(&mut self) {
-
         if let Some(player_index) = self.player_index {
 
             //inputs
@@ -182,6 +240,11 @@ impl Game {
                 || keyboard.is_scancode_pressed(Scancode::Right)
             {
                 player_ship.input.turn += 1.0;
+            }
+
+            if keyboard.is_scancode_pressed(Scancode::Space) 
+            {
+                player_ship.input.primary_fire = true;
             }
         }
 
@@ -214,8 +277,34 @@ impl Game {
         }
     }
 
-    pub fn update_player_velocity(&mut self, dt: f32) {
+    pub fn spawn_projectiles(&mut self) {
+        let mut new_projectiles = Vec::new();
+        for entity in self.entities.iter_mut(){
+            if entity.entity_type == EntityType::Ship {
+                let ship = entity.ship_component.as_ref().unwrap();
+                
+                if ship.input.primary_fire {
+                    println!("woop woop");
 
+                    let projectile = spawn_prjectile(
+                        self.next_entity_id,
+                        entity.transform.position,
+                        entity.transform.rotation,
+                        Some(200.0),
+                        ProjectileType::Bullet,
+                        1.0,
+                        );
+
+                    self.next_entity_id += 1;
+
+                    new_projectiles.push(projectile);
+                }
+            }
+        }
+        self.entities.extend(new_projectiles);
+    }
+
+    pub fn update_player_velocity(&mut self, dt: f32) {
         if let Some(player_index) = self.player_index {
             let player = &mut self.entities[player_index];
             let player_ship = player.ship_component.as_ref().unwrap();
@@ -284,7 +373,7 @@ impl Game {
 
         for entity in self.entities.iter() {
             if entity.entity_type == EntityType::Asteroid {
-                render_asteriod(entity, &mut self.canvas, assets)?;
+                render_asteroid(entity, &mut self.canvas, assets)?;
             }
         }
 

@@ -30,6 +30,7 @@ pub struct ShipStats {
 pub struct ShipInput {
     pub thrust: f32,
     pub turn: f32,
+    pub primary_fire: bool,
 }
 
 impl ShipInput {
@@ -40,7 +41,7 @@ impl ShipInput {
     }
 
     pub fn new() -> ShipInput {
-        ShipInput { thrust: 0.0, turn: 0.0 }
+        ShipInput { thrust: 0.0, turn: 0.0, primary_fire: false}
     }
 
 }

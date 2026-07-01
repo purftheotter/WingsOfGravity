@@ -1,5 +1,6 @@
 use crate::assets::ship_database::ShipDatabase;
 use crate::components::asteroid::{Asteroid, AsteroidChunk};
+use crate::components::projectile::{Projectile, ProjectileType};
 use crate::components::rigidbody::RigidBody;
 use crate::components::hitbox::Hitbox;
 use crate::components::ship::ShipInput;
@@ -7,13 +8,20 @@ use crate::components::velocity::Velocity;
 use crate::components::{ShipComponent, ShipClass};
 use crate::components::transform::Transform;
 use crate::entity::{Entity,EntityType};
+use crate::math::shapes::Circle;
 use crate::math::shapes::polygon::Polygon;
 use crate::math::vec2::Vec2;
 use crate::systems::physics::polygon_inertia;
 
-pub fn spawn_player(spawn_point:Vec2, class: ShipClass, ship_database: &ShipDatabase) -> Entity {
+pub fn spawn_player(
+    entity_id: usize,
+    spawn_point:Vec2,
+    class: ShipClass,
+    ship_database: &ShipDatabase
+    ) -> Entity {
 
     let mut player_entity = Entity {
+        entity_id,
         entity_type: EntityType::Ship,
 
         transform: Transform {
@@ -24,7 +32,7 @@ pub fn spawn_player(spawn_point:Vec2, class: ShipClass, ship_database: &ShipData
 
         rigidbody: RigidBody {
             mass: 1.0,
-            inertia: 67.0,
+            inertia: -1.0,
             velocity: Velocity {
                 linear: Vec2::new(0.0, 0.0),
                 angular: 0.0,
@@ -36,6 +44,7 @@ pub fn spawn_player(spawn_point:Vec2, class: ShipClass, ship_database: &ShipData
             input: ShipInput::new(),
         }),
         asteroid: None,
+        projectile: None,
 
     };
 
@@ -62,8 +71,14 @@ pub fn spawn_player(spawn_point:Vec2, class: ShipClass, ship_database: &ShipData
 
 }
 
-pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
+//-------------------------------
+
+pub fn spawn_asteroid(
+    entity_id: usize,
+    spawn_point:Vec2,
+    scale: f32) -> Entity {
     let mut asteroid_entity = Entity {
+        entity_id,
         entity_type: EntityType::Asteroid,
         transform: Transform {
             position: spawn_point,
@@ -81,6 +96,7 @@ pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
         ship_component: None,
         asteroid: Some(
             Asteroid {
+                texture_mask_id: None,
                 root: AsteroidChunk::new(
                           Polygon::new(vec![
                             Vec2::new(-100.0, -100.0),
@@ -90,14 +106,79 @@ pub fn spawn_asteroid(spawn_point:Vec2, scale: f32) -> Entity {
                           ]), 4.0, 0),
                 max_depth: 4,
             }
-        )
+        ),
+        projectile: None,
     };
 
     let asteroid = asteroid_entity.asteroid.as_ref().unwrap();
 
-    asteroid_entity.rigidbody.inertia = asteroid.get_inertia(&asteroid_entity.rigidbody.mass, &asteroid_entity.transform).expect("asteroid failed to get_inertia");
+    asteroid_entity.rigidbody.inertia = 
+        asteroid.get_inertia(
+            &asteroid_entity.rigidbody.mass,
+            &asteroid_entity.transform)
+        .expect("asteroid failed to get_inertia");
+
     println!("{}", &asteroid_entity.rigidbody.inertia);
 
     asteroid_entity
     
+}
+
+pub fn spawn_prjectile(
+    entity_id: usize,
+    spawn_point:Vec2,
+    rotation: f32,
+    initial_velocity_magnitude: Option<f32>,
+    projectile_type: ProjectileType,
+    damage: f32,
+) -> Entity {
+    let mut projectile = Entity {
+        entity_id,
+        entity_type: EntityType::Projectile,
+        transform: Transform { 
+            position: spawn_point, 
+            rotation, 
+            scale: Vec2::new(1.0, 1.0)
+        },
+
+        rigidbody: RigidBody { 
+            mass: 1.0, 
+            inertia: -1.0, 
+            velocity: Velocity {
+                linear: Vec2::new(0.0, 0.0),
+                angular: 0.0,
+            }, 
+        },
+
+        ship_component: None,
+        asteroid: None,
+        projectile: Some(
+            Projectile {
+                projectile_type: projectile_type,
+                damage: damage,
+                hitbox: Hitbox::Circle { 
+                    circle: Circle {
+                        radius: 3.0,
+                    } 
+                }
+            }
+        )
+    };
+
+    if initial_velocity_magnitude.is_some() &&
+        (projectile_type == ProjectileType::Bullet ||
+        projectile_type == ProjectileType::Missle) 
+    {
+        projectile.rigidbody.velocity.linear.x += 
+            (initial_velocity_magnitude.unwrap()
+             / projectile.rigidbody.mass)
+            * projectile.transform.rotation.sin();
+
+        projectile.rigidbody.velocity.linear.y -= 
+            (initial_velocity_magnitude.unwrap()
+             / projectile.rigidbody.mass)
+            * projectile.transform.rotation.cos(); 
+   }
+   projectile
+
 }

@@ -5,6 +5,7 @@ mod math;
 mod rendering;
 mod systems;
 mod assets;
+mod system_utils;
 
 use game::game::Game;
 

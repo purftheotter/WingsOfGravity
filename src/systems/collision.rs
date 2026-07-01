@@ -1,5 +1,5 @@
 use crate::components::transform::Transform;
-use crate::math::shapes::circle::{self, project_circle};
+use crate::math::shapes::circle::project_circle;
 use crate::math::shapes::{Circle, Polygon};
 use crate::math::shapes::polygon::{
     find_cloesest_point,
@@ -8,7 +8,7 @@ use crate::math::shapes::polygon::{
     clip_incident_to_reference,
     remove_duplicates,
 };
-use crate::math::vec2::{Vec2, distance};
+use crate::math::vec2::Vec2;
 use crate::entity::Entity;
 use crate::entity::EntityType;
 use crate::assets::ship_database::ShipDatabase;

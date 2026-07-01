@@ -30,6 +30,59 @@ pub fn render_polygon(
     Ok(())
 }
 
+pub fn render_filled_polygon(
+    canvas: &mut Canvas<Window>,
+    transform: &Transform,
+    polygon: &Polygon,
+) -> Result<(), String> {
+    let ws_polygon = polygon.apply_transformation(transform);
+    let mut points = vec![];
+    for point in ws_polygon.points.iter() {
+        points.push(FPoint::new(point.x, point.y));
+    }
+
+    if points.len() < 3 {
+        return Ok(());
+    }
+
+    // Find bounding box
+    let min_y = points.iter().map(|p| p.y()).fold(f32::MAX, f32::min) as i32;
+    let max_y = points.iter().map(|p| p.y()).fold(f32::MIN, f32::max) as i32;
+
+    // Scanline fill
+    for y in min_y..=max_y {
+        let y_f = y as f32;
+        let mut intersections: Vec<f32> = Vec::new();
+        let n = points.len();
+
+        for i in 0..n {
+            let a = points[i];
+            let b = points[(i + 1) % n];
+            let ay = a.y();
+            let by = b.y();
+
+            // Check if scanline crosses this edge
+            if (ay <= y_f && by > y_f) || (by <= y_f && ay > y_f) {
+                let t = (y_f - ay) / (by - ay);
+                intersections.push(a.x() + t * (b.x() - a.x()));
+            }
+        }
+
+        intersections.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        for pair in intersections.chunks(2) {
+            if pair.len() == 2 {
+                canvas.draw_fline(
+                    FPoint::new(pair[0], y_f),
+                    FPoint::new(pair[1], y_f),
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn render_circle(
     canvas: &mut Canvas<Window>,
     transform: &Transform,
@@ -72,3 +125,4 @@ pub fn render_circle(
 
     Ok(())
 }
+
