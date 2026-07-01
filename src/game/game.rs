@@ -22,6 +22,7 @@ use crate::entity::Entity;
 use crate::entity::factory::spawn_prjectile;
 use crate::rendering::assets::Assets;
 use crate::rendering::entities::render_asteroid;
+use crate::rendering::entities::render_projectile;
 use crate::rendering::primitives::render_circle;
 use crate::rendering::primitives::render_polygon;
 use crate::rendering::entities::render_ship;
@@ -156,6 +157,12 @@ impl Game {
             "assets/textures/asteroid.png"
         )?;
 
+        assets.load_texture(
+            texture_creator,
+            "green_bullet",
+            "assets/textures/green_bullet.png"
+        )?;
+
         Ok(())
     }
 
@@ -281,10 +288,9 @@ impl Game {
         let mut new_projectiles = Vec::new();
         for entity in self.entities.iter_mut(){
             if entity.entity_type == EntityType::Ship {
-                let ship = entity.ship_component.as_ref().unwrap();
+                let ship = entity.ship_component.as_mut().unwrap();
                 
                 if ship.input.primary_fire {
-                    println!("woop woop");
 
                     let projectile = spawn_prjectile(
                         self.next_entity_id,
@@ -298,6 +304,8 @@ impl Game {
                     self.next_entity_id += 1;
 
                     new_projectiles.push(projectile);
+
+                    ship.input.primary_fire = false;
                 }
             }
         }
@@ -358,23 +366,34 @@ impl Game {
                 )
             );
 
-
-        if let Some(player_index) = self.player_index {
-
-            let player = &self.entities[player_index];
-
-            render_ship(
-                player,
-                &mut self.canvas,
-                assets,
-                &self.ship_database
-            )?;
-        }
-
         for entity in self.entities.iter() {
-            if entity.entity_type == EntityType::Asteroid {
-                render_asteroid(entity, &mut self.canvas, assets)?;
+            match entity.entity_type {
+                    
+                EntityType::Asteroid => {
+                    render_asteroid(
+                        entity,
+                        &mut self.canvas,
+                        assets
+                    )?;
+                }
+                EntityType::Ship => {
+                    render_ship(
+                        entity,
+                        &mut self.canvas,
+                        assets,
+                        &self.ship_database
+                    )?
+                }
+                EntityType::Projectile => {
+                    render_projectile(
+                        entity,
+                        &mut self.canvas,
+                        assets
+                    )?
+                }
+
             }
+            
         }
 
         Ok(())

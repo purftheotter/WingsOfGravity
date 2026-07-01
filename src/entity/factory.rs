@@ -124,6 +124,8 @@ pub fn spawn_asteroid(
     
 }
 
+//------------------------------------------------------
+
 pub fn spawn_prjectile(
     entity_id: usize,
     spawn_point:Vec2,
@@ -137,7 +139,7 @@ pub fn spawn_prjectile(
         entity_type: EntityType::Projectile,
         transform: Transform { 
             position: spawn_point, 
-            rotation, 
+            rotation: rotation, 
             scale: Vec2::new(1.0, 1.0)
         },
 

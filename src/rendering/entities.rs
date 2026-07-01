@@ -7,6 +7,7 @@ use sdl2::pixels::{Color, PixelFormatEnum};
 
 use crate::components::asteroid::Asteroid;
 use crate::components::asteroid::AsteroidChunk;
+use crate::components::projectile::{self, ProjectileType};
 use crate::components::transform::Transform;
 use crate::math::shapes::polygon::project_polygon;
 use crate::rendering::assets::Assets;
@@ -174,3 +175,41 @@ pub fn debug_render_chunk(
 
 }
 
+
+pub fn render_projectile(
+    entity: &Entity,
+    canvas: &mut Canvas<Window>,
+    assets: &Assets,
+    ) -> Result<(), String> {
+    let projectile = entity.projectile.as_ref().unwrap();
+
+    let texture_id = match projectile.projectile_type {
+        ProjectileType::Bullet => "green_bullet",
+        ProjectileType::Missle => "red_missle",
+        ProjectileType::Laser => "green_laser"
+    };
+
+    if let Some(texture) = assets.get(texture_id) {
+
+        canvas.copy_ex_f(
+            texture,
+            None,
+            FRect::from_center(
+                FPoint::new(
+                    entity.transform.position.x,
+                    entity.transform.position.y),
+                texture.query().width as f32 * entity.transform.scale.x,
+                texture.query().height as f32 * entity.transform.scale.y,
+                ),
+            entity.transform.rotation.to_degrees() as f64,
+            FPoint::new(
+                (texture.query().width as f32 * entity.transform.scale.x) / 2.0,
+                (texture.query().height as f32 * entity.transform.scale.y) / 2.0,
+        ),
+            false,
+            false,
+        )?;
+    }
+
+    Ok(())
+}
