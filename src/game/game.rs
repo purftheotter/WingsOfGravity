@@ -21,12 +21,14 @@ use crate::entity::factory::spawn_player;
 use crate::entity::Entity;
 use crate::entity::factory::spawn_prjectile;
 use crate::rendering::assets::Assets;
+use crate::rendering::entities::debug_render_asteriod;
 use crate::rendering::entities::render_asteroid;
 use crate::rendering::entities::render_projectile;
 use crate::rendering::primitives::render_circle;
 use crate::rendering::primitives::render_polygon;
 use crate::rendering::entities::render_ship;
 use crate::rendering::entities::build_asteroid_mask;
+use crate::rendering::entities::build_asteroid_sprite;
 use crate::systems::collision;
 use crate::systems::physics::{apply_forward_thrust,apply_torque,apply_velocity};
 use crate::math::vec2::Vec2;
@@ -197,20 +199,32 @@ impl Game {
 
         self.next_entity_id += 1;
 
-        let mask_id = format!(
-            "asteroid_mask{}",
+        let sprite_id = format!(
+            "asteroid_sprite{}",
             asteroid_entity.entity_id
         );
-        
-        let mask = build_asteroid_mask(
+
+        let mut mask = build_asteroid_mask(
             &mut self.canvas,
             texture_creator,
             asteroid_entity.asteroid.as_ref().unwrap(),
         )?;
 
-        assets.insert_texture(&mask_id, mask);
+        let rock_texture = assets.get_mut("asteroid")
+            .expect("asteroid rock texture not loaded");
 
-        asteroid_entity.asteroid.as_mut().unwrap().texture_mask_id = Some(mask_id);
+        let sprite = build_asteroid_sprite(
+            &mut self.canvas,
+            texture_creator,
+            rock_texture,
+            &mut mask,
+            64,
+        )?;
+
+    assets.insert_texture(&sprite_id, sprite);
+
+    asteroid_entity.asteroid.as_mut().unwrap().sprite_id = 
+        Some(sprite_id);
 
         self.entities.push(asteroid_entity);
 
@@ -406,28 +420,54 @@ impl Game {
 
         self.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
-        if let Some(player_index) = self.player_index {
-            let player = &mut self.entities[player_index];
+        for entity in self.entities.iter(){
+            match entity.entity_type {
+                EntityType::Ship => {
+                    let ship_class = entity.ship_component.as_ref().unwrap().class;
+                    let hitbox = &self.ship_database.get(ship_class).hitbox;
 
-            match &self.ship_database.get(player.ship_component.as_ref().unwrap().class).hitbox {
-                Hitbox::Circle { circle } => {
-                    render_circle(
-                        &mut self.canvas,
-                        &player.transform,
-                        &circle,
-                    )?;
+                    match hitbox {
+                        Hitbox::Circle { circle } => {
+                            render_circle(
+                                &mut self.canvas,
+                                &entity.transform,
+                                &circle
+                            )?;
+                        },
+                        Hitbox::Polygon { polygon } => {
+                            render_polygon(
+                                &mut self.canvas,
+                                &entity.transform,
+                                &polygon
+                            )?;
+                        }
+                        
+                    }
+                },
+                EntityType::Asteroid => {
+                    debug_render_asteriod(&entity, &mut self.canvas)?;
                 }
-
-                Hitbox::Polygon { polygon } => {
-                    render_polygon(
-                        &mut self.canvas,
-                        &player.transform,
-                        &polygon,
-                    )?;
+                EntityType::Projectile => {
+                    let hitbox = &entity.projectile.as_ref().unwrap().hitbox;
+                    match hitbox {
+                         Hitbox::Circle { circle } => {
+                            render_circle(
+                                &mut self.canvas,
+                                &entity.transform,
+                                &circle
+                            )?;
+                        },
+                        Hitbox::Polygon { polygon } => {
+                            render_polygon(
+                                &mut self.canvas,
+                                &entity.transform,
+                                &polygon
+                            )?;
+                        }
+                        
+                    }
                 }
-
             }
-
         }
 
         Ok(())  

@@ -215,12 +215,14 @@ pub fn update_player_collisions(
                     continue;
                 }
 
-                if let Some(collision) = ship_asteroid_collision(
+                let collisions = ship_asteroid_collision(
                     &mut player,
                     &mut asteroid,
                     ship_database,
-                ){
+                );
 
+                for collision in collisions.iter(){
+                    println!("{:?}", &collision.points);
                     for &point in &collision.points {
                         let single = Collision {
                             normal: collision.normal,
@@ -232,8 +234,6 @@ pub fn update_player_collisions(
                     correct_position(&collision, asteroid, player);
                 }
 
-                
-
             }
 }
 
@@ -242,7 +242,7 @@ pub fn ship_asteroid_collision(
     ship: &mut Entity,
     asteroid_entity: &mut Entity,
     ship_database: &ShipDatabase,
-) -> Option<Collision> {
+) -> Vec<Collision> {
 
     let ship_component = ship
         .ship_component
@@ -250,7 +250,7 @@ pub fn ship_asteroid_collision(
         .unwrap();
     let ship_component_stats = ship_database.get(ship_component.class);
 
-    let ship_hitbox = match &ship_component_stats.hitbox {Hitbox::Polygon { polygon } => polygon,_ => return None,};
+    let ship_hitbox = match &ship_component_stats.hitbox {Hitbox::Polygon { polygon } => polygon,_ => return Vec::new(),};
 
 
     let asteroid = asteroid_entity.asteroid.as_ref().unwrap();

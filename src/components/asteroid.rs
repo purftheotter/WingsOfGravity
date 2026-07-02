@@ -1,4 +1,3 @@
-
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
@@ -12,7 +11,7 @@ use crate::systems::physics::polygon_inertia;
 pub struct Asteroid {
     pub root: AsteroidChunk,
     pub max_depth: u8,
-    pub texture_mask_id: Option<String>,
+    pub sprite_id: Option<String>,
 }
 
 impl Asteroid {
@@ -21,7 +20,7 @@ impl Asteroid {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> Option<Collision> {
+    ) -> Vec<Collision> {
         self.root.recursive_collide(other, &self_transform, &other_transform)
     }
 
@@ -123,28 +122,37 @@ impl AsteroidChunk {
         other: &Polygon,
         self_transform: &Transform,
         other_transform: &Transform,
-    ) -> Option<Collision> {
+    ) -> Vec<Collision> {
         if self.destroyed {
-            return None;
+            return Vec::new();
         }
 
-        let collision: Option<Collision> = match self.collides(other, self_transform, other_transform) {
-            Some(c) => Some(c),
-            None => return None, 
+        let collision =
+            match self.collides(other, self_transform, other_transform)
+        {
+            Some(c) => c,
+            None => return Vec::new(), 
         };
 
-        if let Some(children) = &self.children {
-            for child in children {
-                let result = child.recursive_collide(other, self_transform, other_transform);
-                if result.is_some() {
-                    return result;
-                }
-            }
-        }else {
-            return collision;
-        }
+        match &self.children {
+            
+            Some(children) => {
+                let mut collisions = Vec::new();
 
-        return None;
+                for child in children {
+                    collisions.extend(
+                        child.recursive_collide(
+                            other,
+                            self_transform,
+                            other_transform)
+                        );
+                }
+
+                collisions
+
+            },
+            None => { return vec![collision] }
+        }
 
     }
 

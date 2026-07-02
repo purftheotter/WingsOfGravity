@@ -96,14 +96,16 @@ pub fn spawn_asteroid(
         ship_component: None,
         asteroid: Some(
             Asteroid {
-                texture_mask_id: None,
+                sprite_id: None,
                 root: AsteroidChunk::new(
                           Polygon::new(vec![
-                            Vec2::new(-100.0, -100.0),
+                            Vec2::new(-100.0, -200.0),
                             Vec2::new(100.0, -100.0),
-                            Vec2::new(100.0, 100.0),
+                            Vec2::new(200.0, 100.0),
+                            Vec2::new(200.0, 200.0),
                             Vec2::new(-100.0, 100.0),
-                          ]), 4.0, 0),
+                          ]).centered(),
+                          4.0, 0),
                 max_depth: 4,
             }
         ),

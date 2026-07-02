@@ -7,13 +7,14 @@ use sdl2::pixels::{Color, PixelFormatEnum};
 
 use crate::components::asteroid::Asteroid;
 use crate::components::asteroid::AsteroidChunk;
-use crate::components::projectile::{self, ProjectileType};
+use crate::components::projectile::ProjectileType;
+use crate::components::sprite;
 use crate::components::transform::Transform;
 use crate::math::shapes::polygon::project_polygon;
 use crate::rendering::assets::Assets;
 use crate::entity::Entity;
 use crate::assets::ship_database::ShipDatabase;
-use crate::rendering::primitives::render_filled_polygon;
+use crate::rendering::primitives::render_polygon;
 
 use crate::math::vec2::Vec2;
 use crate::math::vec2::project_points;
@@ -51,7 +52,6 @@ pub fn render_ship(
     Ok(())
 }
 
-
 pub fn render_asteroid(
     entity: &Entity,
     canvas: &mut Canvas<Window>,
@@ -59,15 +59,10 @@ pub fn render_asteroid(
 ) -> Result<(),String>{
     let asteroid = entity.asteroid.as_ref().unwrap();
 
-    let asteroid_texture_mask_id = 
-        asteroid.texture_mask_id.as_ref().unwrap();
+    let sprite_id = 
+        asteroid.sprite_id.as_ref().unwrap();
 
-    let rock_texture = match assets.get("asteroid") {
-        Some(t) => t,
-        None => return Ok(()),
-    };
-
-    let mask_texture = match assets.get(&asteroid_texture_mask_id) {
+    let sprite_texture = match assets.get(&sprite_id) {
         Some(t) => t,
         None => return Ok(()),
     };
@@ -88,13 +83,13 @@ pub fn render_asteroid(
         asteroid_h * entity.transform.scale.y,
         );
     let angle = entity.transform.rotation.to_degrees() as f64;
+
     let center = FPoint::new(
-        asteroid_w/2.0,
-        asteroid_h/2.0,
+        (asteroid_w * entity.transform.scale.x) / 2.0,
+        (asteroid_h * entity.transform.scale.y) / 2.0,
     );
 
-    canvas.copy_ex_f(rock_texture, None, dst, angle, center, false, false)?;
-    canvas.copy_ex_f(mask_texture, None, dst, angle, center, false, false)?;
+    canvas.copy_ex_f(sprite_texture, None, dst, angle, center, false, false)?;
 
     Ok(())
     
@@ -137,11 +132,41 @@ pub fn build_asteroid_mask(
         )
     }).map_err(|e| e.to_string())?;
 
-    mask.set_blend_mode(BlendMode::Mod);
-
     let mask: Texture<'static> = unsafe {std::mem::transmute(mask)};
 
     Ok(mask)
+}
+
+pub fn build_asteroid_sprite(
+    canvas: &mut Canvas<Window>,
+    texture_creator: &TextureCreator<WindowContext>,
+    rock_texture: &mut Texture,
+    mask_texture: &mut Texture,
+    tex_size: u32,
+) -> Result<Texture<'static>, String> {
+    let mut sprite = texture_creator
+        .create_texture_target(Some(PixelFormatEnum::RGBA8888), tex_size, tex_size)
+        .map_err(|e| e.to_string())?;
+
+    canvas.with_texture_canvas(&mut sprite, |c| {
+        c.set_draw_color(Color::RGBA(0, 0, 0, 0));
+        c.clear();
+
+        mask_texture.set_blend_mode(BlendMode::None);
+        let _ = c.copy(mask_texture, None, None);
+
+
+        rock_texture.set_blend_mode(BlendMode::Mod);
+        let _ = c.copy(rock_texture, None, None);
+
+    }).map_err(|e| e.to_string())?;
+
+    sprite.set_blend_mode(BlendMode::Blend);
+
+    let sprite: Texture<'static> = 
+        unsafe { std::mem::transmute(sprite) };
+
+    Ok(sprite)
 }
 
 pub fn debug_render_asteriod(
@@ -162,12 +187,12 @@ pub fn debug_render_chunk(
             debug_render_chunk(canvas, child, &transform)?;
         }
         
-        render_filled_polygon(canvas, &transform, &chunk.shape)?;
+        render_polygon(canvas, &transform, &chunk.shape)?;
 
     }else {
         canvas.set_draw_color(Color::RGB(100, 0, 100));
 
-        render_filled_polygon(canvas, &transform, &chunk.shape)?;
+        render_polygon(canvas, &transform, &chunk.shape)?;
     }
 
 

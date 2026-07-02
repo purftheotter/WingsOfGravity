@@ -16,6 +16,23 @@ impl Polygon {
         Self { points }
     }
 
+    pub fn centered(&self) -> Polygon {
+        let (min_x, max_x) = project_points(&self.points, Vec2::new(1.0, 0.0));
+        let (min_y, max_y) = project_points(&self.points, Vec2::new(0.0, 1.0));
+
+        let offset = Vec2::new(
+            (min_x + max_x) / 2.0,
+            (min_y + max_y) / 2.0,
+        );
+
+        let points = self.points.iter()
+            .map(|p| Vec2::new(p.x - offset.x, p.y - offset.y))
+            .collect();
+
+        Polygon::new(points)
+    }
+
+
     pub fn apply_transformation(
         &self,
         transform: &Transform,
