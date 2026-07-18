@@ -5,7 +5,6 @@ use crate::components::transform::Transform;
 use crate::math::shapes::polygon::Polygon;
 use crate::math::vec2::Vec2;
 use crate::rendering::primitives::render_filled_polygon;
-use crate::systems::collision::{Collision, sat_collision_pg_pg};
 use crate::systems::physics::polygon_inertia;
 
 pub struct Asteroid {
@@ -15,14 +14,6 @@ pub struct Asteroid {
 }
 
 impl Asteroid {
-    pub fn collides(
-        &self,
-        other: &Polygon,
-        self_transform: &Transform,
-        other_transform: &Transform,
-    ) -> Vec<Collision> {
-        self.root.recursive_collide(other, &self_transform, &other_transform)
-    }
 
     pub fn get_inertia(
         &self,
@@ -60,6 +51,7 @@ pub struct AsteroidChunk {
 
 
 impl AsteroidChunk {
+
     pub fn new(shape:Polygon, health:f32, depth:u8) -> Self {
         Self {
             shape: shape,
@@ -116,53 +108,6 @@ impl AsteroidChunk {
             
         }
 
-    }
-    pub fn recursive_collide(
-        &self,
-        other: &Polygon,
-        self_transform: &Transform,
-        other_transform: &Transform,
-    ) -> Vec<Collision> {
-        if self.destroyed {
-            return Vec::new();
-        }
-
-        let collision =
-            match self.collides(other, self_transform, other_transform)
-        {
-            Some(c) => c,
-            None => return Vec::new(), 
-        };
-
-        match &self.children {
-            
-            Some(children) => {
-                let mut collisions = Vec::new();
-
-                for child in children {
-                    collisions.extend(
-                        child.recursive_collide(
-                            other,
-                            self_transform,
-                            other_transform)
-                        );
-                }
-
-                collisions
-
-            },
-            None => { return vec![collision] }
-        }
-
-    }
-
-    pub fn collides(
-        &self,
-        other: &Polygon,
-        self_transform: &Transform,
-        other_transform: &Transform,
-    ) -> Option<Collision> {
-        sat_collision_pg_pg(self_transform, &self.shape, other_transform, other)
     }
 
     pub fn recursive_get_inertia(

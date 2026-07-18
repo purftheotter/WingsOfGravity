@@ -29,7 +29,6 @@ use crate::rendering::primitives::render_polygon;
 use crate::rendering::entities::render_ship;
 use crate::rendering::entities::build_asteroid_mask;
 use crate::rendering::entities::build_asteroid_sprite;
-use crate::systems::collision;
 use crate::systems::physics::{apply_forward_thrust,apply_torque,apply_velocity};
 use crate::math::vec2::Vec2;
 
@@ -357,11 +356,7 @@ impl Game {
     }
 
     pub fn update_collisions(&mut self) {
-        collision::update_player_collisions(
-            &mut self.entities,
-            self.player_index.unwrap(),
-            &self.ship_database
-        );
+
     }
 
     pub fn render(&mut self, assets: &Assets) -> Result<(), String> {
