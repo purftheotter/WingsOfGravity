@@ -13,6 +13,7 @@ use crate::entity::Entity;
 use crate::entity::EntityType;
 use crate::assets::ship_database::ShipDatabase;
 use crate::components::hitbox::Hitbox;
+use crate::systems::collision;
 use crate::systems::physics::{correct_position, resolve_impulse};
 
 pub struct Collision {
@@ -221,8 +222,14 @@ pub fn update_player_collisions(
                     ship_database,
                 );
 
+                let collisions = merge_collisions(collisions);
+
+                if collisions.is_empty() {
+                    println!("no collisions");
+                }
+
                 for collision in collisions.iter(){
-                    println!("{:?}", &collision.points);
+                    println!("collided!");
                     for &point in &collision.points {
                         let single = Collision {
                             normal: collision.normal,
@@ -272,3 +279,33 @@ pub fn find_contact_points_pg_pg(pg1: &Polygon, pg2:&Polygon, normal: Vec2,) -> 
     points
 }
 
+pub fn merge_collisions(collisions : Vec<Collision>) -> Vec<Collision> {
+    const DIST_THRESHOULD: f32 = 0.5;
+    let mut merged: Vec<Collision> = Vec::new();
+
+    for collision in collisions {
+
+        if collision.points.is_empty() {
+            merged.push(collision);
+            continue;
+        };
+
+        for &point in &collision.points {
+            let is_duplicate = merged.iter().any(|m: &Collision| {
+                m.points.iter().any(|&p| {
+                    (p - point).length_sq() < DIST_THRESHOULD * DIST_THRESHOULD
+                })
+            });
+
+            if !is_duplicate {
+                merged.push(Collision {
+                    normal: collision.normal,
+                    depth: collision.depth,
+                    points: vec![point]
+                });
+            }
+        }
+    }
+
+    merged
+}

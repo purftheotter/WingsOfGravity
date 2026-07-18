@@ -423,8 +423,10 @@ impl Game {
         for entity in self.entities.iter(){
             match entity.entity_type {
                 EntityType::Ship => {
-                    let ship_class = entity.ship_component.as_ref().unwrap().class;
-                    let hitbox = &self.ship_database.get(ship_class).hitbox;
+                    let ship_class = 
+                        entity.ship_component.as_ref().unwrap().class;
+                    let hitbox = 
+                        &self.ship_database.get(ship_class).hitbox;
 
                     match hitbox {
                         Hitbox::Circle { circle } => {
