@@ -1,7 +1,6 @@
 mod components;
 mod entity;
 mod game;
-mod math;
 mod rendering;
 mod systems;
 mod assets;

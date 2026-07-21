@@ -1,4 +1,3 @@
-use crate::components::hitbox::Hitbox;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum ShipClass {
@@ -22,7 +21,6 @@ pub struct ShipStats {
     pub angular_drag: f32,
     
     pub texture_id: String,
-    pub hitbox: Hitbox,
 }
 
 

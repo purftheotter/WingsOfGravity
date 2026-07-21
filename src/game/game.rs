@@ -1,6 +1,5 @@
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode;
+use rapier2d::prelude::*;
+
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
@@ -12,25 +11,13 @@ use std::time::Instant;
 
 use crate::assets::ship_database::ShipDatabase;
 use crate::components::ShipClass;
-use crate::components::hitbox::Hitbox;
-use crate::components::projectile::ProjectileType;
 
 use crate::entity::EntityType;
-use crate::entity::factory::spawn_asteroid;
 use crate::entity::factory::spawn_player;
 use crate::entity::Entity;
-use crate::entity::factory::spawn_prjectile;
+use crate::game::input::exiting_debug_input;
+use crate::game::input::player_input;
 use crate::rendering::assets::Assets;
-use crate::rendering::entities::debug_render_asteriod;
-use crate::rendering::entities::render_asteroid;
-use crate::rendering::entities::render_projectile;
-use crate::rendering::primitives::render_circle;
-use crate::rendering::primitives::render_polygon;
-use crate::rendering::entities::render_ship;
-use crate::rendering::entities::build_asteroid_mask;
-use crate::rendering::entities::build_asteroid_sprite;
-use crate::systems::physics::{apply_forward_thrust,apply_torque,apply_velocity};
-use crate::math::vec2::Vec2;
 
 pub struct Game {
     pub canvas: Canvas<Window>,
@@ -123,13 +110,7 @@ impl Game {
 
             self.handle_input();
 
-            self.spawn_projectiles();
-
             self.update_player_velocity(dt);
-
-            self.update_transform(dt);
-
-            self.update_collisions();
 
             self.render(&assets).expect("Render Failed");
 
@@ -189,140 +170,23 @@ impl Game {
 
         self.next_entity_id += 1;
 
-        //spawn_asteroid
-        let mut asteroid_entity = spawn_asteroid(
-            self.next_entity_id,
-            Vec2::new(400.0, 400.0),
-            1.0,
-        );
-
-        self.next_entity_id += 1;
-
-        let sprite_id = format!(
-            "asteroid_sprite{}",
-            asteroid_entity.entity_id
-        );
-
-        let mut mask = build_asteroid_mask(
-            &mut self.canvas,
-            texture_creator,
-            asteroid_entity.asteroid.as_ref().unwrap(),
-        )?;
-
-        let rock_texture = assets.get_mut("asteroid")
-            .expect("asteroid rock texture not loaded");
-
-        let sprite = build_asteroid_sprite(
-            &mut self.canvas,
-            texture_creator,
-            rock_texture,
-            &mut mask,
-            64,
-        )?;
-
-    assets.insert_texture(&sprite_id, sprite);
-
-    asteroid_entity.asteroid.as_mut().unwrap().sprite_id = 
-        Some(sprite_id);
-
-        self.entities.push(asteroid_entity);
-
         Ok(())
     }
 
     pub fn handle_input(&mut self) {
+
         if let Some(player_index) = self.player_index {
-
-            //inputs
-            let keyboard = self.event_pump.keyboard_state();
-
-            let player = &mut self.entities[player_index];
-
-            let player_ship = player.ship_component.as_mut().unwrap();
-
-            player_ship.input.zero();
-
-            if keyboard.is_scancode_pressed(Scancode::W) || keyboard.is_scancode_pressed(Scancode::Up) {
-                player_ship.input.thrust += 1.0;
-            }
-
-            if keyboard.is_scancode_pressed(Scancode::A) || keyboard.is_scancode_pressed(Scancode::Left)
-            {
-                player_ship.input.turn -= 1.0;
-            }
-
-            if keyboard.is_scancode_pressed(Scancode::S) || keyboard.is_scancode_pressed(Scancode::Down)
-            {
-                player_ship.input.thrust -= 0.1;
-            }
-
-            if keyboard.is_scancode_pressed(Scancode::D)
-                || keyboard.is_scancode_pressed(Scancode::Right)
-            {
-                player_ship.input.turn += 1.0;
-            }
-
-            if keyboard.is_scancode_pressed(Scancode::Space) 
-            {
-                player_ship.input.primary_fire = true;
-            }
+            let mut player = &mut self.entities[player_index];
+            let keyboard_state = &self.event_pump.keyboard_state();
+                player_input(&keyboard_state, &mut player);
         }
 
-        for event in self.event_pump.poll_iter() {
-            match event {
-                Event::KeyDown { scancode: Some(Scancode::F2), .. } => {
-                    self.debug_mode = !self.debug_mode;
-                }
+        exiting_debug_input(
+            &mut self.event_pump,
+            &mut self.debug_mode,
+            &mut self.running
+        );
 
-                Event::KeyDown { scancode: Some(Scancode::E), ..} => {
-                    for entity in self.entities.iter_mut() {
-                        if entity.entity_type == EntityType::Asteroid {
-                            if let Some(asteroid) = entity.asteroid.as_mut() {
-                                asteroid.root.subdivide(asteroid.max_depth);
-                            }                            
-                        }
-                        
-                    }
-                }
-
-                Event::Quit { .. } => self.running = false,
-
-                Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => self.running = false,
-
-                _ => {}
-            }
-        }
-    }
-
-    pub fn spawn_projectiles(&mut self) {
-        let mut new_projectiles = Vec::new();
-        for entity in self.entities.iter_mut(){
-            if entity.entity_type == EntityType::Ship {
-                let ship = entity.ship_component.as_mut().unwrap();
-                
-                if ship.input.primary_fire {
-
-                    let projectile = spawn_prjectile(
-                        self.next_entity_id,
-                        entity.transform.position,
-                        entity.transform.rotation,
-                        Some(200.0),
-                        ProjectileType::Bullet,
-                        1.0,
-                        );
-
-                    self.next_entity_id += 1;
-
-                    new_projectiles.push(projectile);
-
-                    ship.input.primary_fire = false;
-                }
-            }
-        }
-        self.entities.extend(new_projectiles);
     }
 
     pub fn update_player_velocity(&mut self, dt: f32) {
@@ -330,33 +194,7 @@ impl Game {
             let player = &mut self.entities[player_index];
             let player_ship = player.ship_component.as_ref().unwrap();
             let player_ship_stats = self.ship_database.get(player_ship.class);
-
-            //update velocity
-            apply_forward_thrust(
-                &mut player.rigidbody.velocity,
-                &player.transform.rotation,
-                &(player_ship_stats.thrust * player_ship.input.thrust),
-                &player.rigidbody.mass,
-                &dt
-            );
-            apply_torque(
-                &mut player.rigidbody.velocity,
-                &(player_ship_stats.torque * player_ship.input.turn),
-                &player.rigidbody.inertia,
-                &dt
-            );
-
         }
-    }
-
-    pub fn update_transform(&mut self, dt: f32) {
-        for entity in self.entities.iter_mut() {
-            apply_velocity(&mut entity.transform, &entity.rigidbody.velocity, &dt);
-        }
-    }
-
-    pub fn update_collisions(&mut self) {
-
     }
 
     pub fn render(&mut self, assets: &Assets) -> Result<(), String> {
@@ -378,31 +216,10 @@ impl Game {
         for entity in self.entities.iter() {
             match entity.entity_type {
                     
-                EntityType::Asteroid => {
-                    render_asteroid(
-                        entity,
-                        &mut self.canvas,
-                        assets
-                    )?;
-                }
-                EntityType::Ship => {
-                    render_ship(
-                        entity,
-                        &mut self.canvas,
-                        assets,
-                        &self.ship_database
-                    )?
-                }
-                EntityType::Projectile => {
-                    render_projectile(
-                        entity,
-                        &mut self.canvas,
-                        assets
-                    )?
-                }
-
+                EntityType::Asteroid => {}
+                EntityType::Ship => {}
+                EntityType::Projectile => {}
             }
-            
         }
 
         Ok(())
@@ -416,55 +233,6 @@ impl Game {
         self.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
         for entity in self.entities.iter(){
-            match entity.entity_type {
-                EntityType::Ship => {
-                    let ship_class = 
-                        entity.ship_component.as_ref().unwrap().class;
-                    let hitbox = 
-                        &self.ship_database.get(ship_class).hitbox;
-
-                    match hitbox {
-                        Hitbox::Circle { circle } => {
-                            render_circle(
-                                &mut self.canvas,
-                                &entity.transform,
-                                &circle
-                            )?;
-                        },
-                        Hitbox::Polygon { polygon } => {
-                            render_polygon(
-                                &mut self.canvas,
-                                &entity.transform,
-                                &polygon
-                            )?;
-                        }
-                        
-                    }
-                },
-                EntityType::Asteroid => {
-                    debug_render_asteriod(&entity, &mut self.canvas)?;
-                }
-                EntityType::Projectile => {
-                    let hitbox = &entity.projectile.as_ref().unwrap().hitbox;
-                    match hitbox {
-                         Hitbox::Circle { circle } => {
-                            render_circle(
-                                &mut self.canvas,
-                                &entity.transform,
-                                &circle
-                            )?;
-                        },
-                        Hitbox::Polygon { polygon } => {
-                            render_polygon(
-                                &mut self.canvas,
-                                &entity.transform,
-                                &polygon
-                            )?;
-                        }
-                        
-                    }
-                }
-            }
         }
 
         Ok(())  
