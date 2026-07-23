@@ -1,3 +1,5 @@
+use rapier2d::dynamics::RigidBodyHandle;
+
 use crate::components::ship::ShipComponent;
 use crate::components::projectile::Projectile;
 
@@ -10,6 +12,8 @@ pub enum EntityType {
 
 pub struct Entity {
     pub entity_id: usize,
+
+    pub rigid_body_handle: RigidBodyHandle,
 
     pub entity_type: EntityType,
 

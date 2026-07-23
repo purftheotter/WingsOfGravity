@@ -1,3 +1,5 @@
+use rapier2d::geometry::SharedShape;
+
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum ShipClass {
@@ -16,10 +18,9 @@ pub struct ShipStats {
 
     pub thrust: f32,
     pub torque: f32,
+ 
+    pub hitbox:SharedShape,
 
-    pub linear_drag: f32,
-    pub angular_drag: f32,
-    
     pub texture_id: String,
 }
 

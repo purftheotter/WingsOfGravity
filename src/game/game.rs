@@ -7,8 +7,8 @@ use sdl2::render::TextureCreator;
 use sdl2::video::Window;
 use sdl2::EventPump;
 use sdl2::video::WindowContext;
-use std::time::Instant;
 
+use crate::physics_world::physics_world::PhysicsWorld;
 use crate::assets::ship_database::ShipDatabase;
 use crate::components::ShipClass;
 
@@ -18,6 +18,8 @@ use crate::entity::Entity;
 use crate::game::input::exiting_debug_input;
 use crate::game::input::player_input;
 use crate::rendering::assets::Assets;
+use crate::rendering::primitives::render_ball;
+use crate::rendering::primitives::render_triangle;
 
 pub struct Game {
     pub canvas: Canvas<Window>,
@@ -26,6 +28,7 @@ pub struct Game {
     pub screen_width: u32,
     pub screen_height: u32,
     pub debug_mode: bool,
+    pub physics_world: PhysicsWorld,
     pub next_entity_id: usize,
     pub entities: Vec<Entity>,
     pub player_index: Option<usize>,
@@ -34,6 +37,8 @@ pub struct Game {
 
 impl Game {
     pub fn new() -> Result<Self, String> {
+        let physics_world = PhysicsWorld::new(Vec2::new(0.0, -9.81));
+
         let screen_width = 1920;
         let screen_height = 1080;
 
@@ -74,6 +79,7 @@ impl Game {
         Ok(Self {
             canvas,
             event_pump,
+            physics_world,
             next_entity_id,
             entities,
             running: true,
@@ -95,22 +101,15 @@ impl Game {
 
         self.load_textures(&mut assets, &texture_creator)?;
 
-        self.load_world(&mut assets, &texture_creator)?;
-
-        //setup for making the loop run at a consistent rate
-        let mut last_frame = Instant::now();
+        self.load_world()?;
 
         while self.running {
 
-            let current_frame = Instant::now();
-
-            let dt = current_frame.duration_since(last_frame).as_secs_f32();
-
-            last_frame = current_frame;
-
             self.handle_input();
 
-            self.update_player_velocity(dt);
+            self.update_player_velocity();
+
+            self.physics_world.step();
 
             self.render(&assets).expect("Render Failed");
 
@@ -150,8 +149,6 @@ impl Game {
 
     pub fn load_world(
         &mut self,
-        assets: &mut Assets,
-        texture_creator: &TextureCreator<WindowContext>
         ) -> Result<(), String> {
 
         //spawn_player
@@ -163,7 +160,9 @@ impl Game {
                     self.screen_height as f32 /2.0
                 ),
                 ShipClass::Scout,
-                &self.ship_database
+                &self.ship_database,
+                &mut self.physics_world.rigid_body_set,
+                &mut self.physics_world.collider_set,
             )
         );
         self.player_index = Some(self.next_entity_id);
@@ -189,12 +188,7 @@ impl Game {
 
     }
 
-    pub fn update_player_velocity(&mut self, dt: f32) {
-        if let Some(player_index) = self.player_index {
-            let player = &mut self.entities[player_index];
-            let player_ship = player.ship_component.as_ref().unwrap();
-            let player_ship_stats = self.ship_database.get(player_ship.class);
-        }
+    pub fn update_player_velocity(&mut self) {
     }
 
     pub fn render(&mut self, assets: &Assets) -> Result<(), String> {
@@ -233,6 +227,42 @@ impl Game {
         self.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
         for entity in self.entities.iter(){
+            let entity_rigid_body = 
+                self.physics_world.rigid_body_set
+                    .get_mut(entity.rigid_body_handle)
+                    .unwrap();
+            let entity_collider_handles:&[ColliderHandle] = 
+                entity_rigid_body.colliders();
+            let mut entity_colliders = vec![];
+            for handle in entity_collider_handles {
+                entity_colliders
+                    .push(self.physics_world.collider_set.get(*handle).unwrap());
+            }
+
+            for collider in entity_colliders {
+                let shape = collider.shape();
+                
+                match shape.as_typed_shape() {
+                    TypedShape::Ball(ball) => {
+                        render_ball(
+                            &mut self.canvas,
+                            entity_rigid_body.position(),
+                            ball
+                        )?
+                    }
+
+                    TypedShape::Triangle(tri) => {
+                        render_triangle(
+                            &mut self.canvas,
+                            entity_rigid_body.position(),
+                            tri,
+                            )?
+                    }
+
+                    _ => {}
+                    
+                }
+            }
         }
 
         Ok(())  
