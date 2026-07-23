@@ -1,6 +1,7 @@
 mod components;
 mod entity;
 mod game;
+mod render_context;
 mod physics_world;
 mod rendering;
 mod systems;

@@ -38,7 +38,6 @@ pub fn spawn_player(
 
     let collider = ColliderBuilder::new(ship_stats.hitbox.clone());
 
-
     collider_set.insert_with_parent(collider, rigid_body_handle, rigidbody_set);
 
 

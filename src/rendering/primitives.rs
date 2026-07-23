@@ -1,72 +1,91 @@
-use std::ffi::c_float;
-
 use rapier2d::geometry::*;
 use rapier2d::math::*;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
+use rapier2d::parry::transformation::utils::transformed;
+use crate::render_context::RenderContext;
 use sdl2::rect::FPoint;
 
 pub fn render_ws_line(
-    canvas: &mut Canvas<Window>,
+    render_context: &mut RenderContext,
     start: &Vec2,
     end: &Vec2,
 ) -> Result<(), String> {
+    let start = render_context.world_to_screen(*start);
+    let end = render_context.world_to_screen(*end);
+
     let start = FPoint::new(start.x, start.y);
     let end = FPoint::new(end.x, end.y);
-    canvas.draw_fline(start, end)
+
+    render_context.canvas.draw_fline(start, end)
 }
 
-
 pub fn render_triangle(
-    canvas: &mut Canvas<Window>,
+    render_context: &mut RenderContext,
     position: &Pose2,
     triangle: &Triangle,
 ) -> Result<(), String> {
 
     let transformed_triangle = triangle.transformed(position);
 
+    let a_vec2 = 
+        render_context.world_to_screen(transformed_triangle.a);
+    let b_vec2 =
+        render_context.world_to_screen(transformed_triangle.b);
+    let c_vec2 = 
+        render_context.world_to_screen(transformed_triangle.c);
+
     let a_fpoint = FPoint::new(
-        transformed_triangle.a.x,
-        transformed_triangle.a.x
+        a_vec2.x,
+        a_vec2.y
         );
     let b_fpoint = FPoint::new(
-        transformed_triangle.b.x,
-        transformed_triangle.b.y
+        b_vec2.x,
+        b_vec2.y
         );
     let c_fpoint = FPoint::new(
-        transformed_triangle.c.x,
-        transformed_triangle.c.y
+        c_vec2.x,
+        c_vec2.y
         );
 
-    canvas.draw_fline(a_fpoint, b_fpoint)?;
-    canvas.draw_fline(b_fpoint, c_fpoint)?;
-    canvas.draw_fline(c_fpoint, a_fpoint)?;
+    render_context.canvas.draw_fline(a_fpoint, b_fpoint)?;
+    render_context.canvas.draw_fline(b_fpoint, c_fpoint)?;
+    render_context.canvas.draw_fline(c_fpoint, a_fpoint)?;
+
+    println!("{:?}", position);
+
+    println!("a: {:?}, b: {:?}, c: {:?}", a_fpoint, b_fpoint, c_fpoint);
 
     Ok(())
 }
 
 
 pub fn render_polygon(
-    canvas: &mut Canvas<Window>,
+    render_context: &mut RenderContext,
     position: &Pose2,
     polygon: &ConvexPolygon,
 ) -> Result<(), String> {
 
-    let mut transformed_polygon: Vec<Vec2>= vec![];
+    let mut transformed_points: Vec<Vec2> = vec![];
+    
     for point in polygon.points() {
-        transformed_polygon.push(*position * *point);
+        transformed_points.push(*position * *point);
     }
 
-    for i in 0..transformed_polygon.len() {
+    let mut ws_points: Vec<Vec2> = vec![];
 
-        let current = &transformed_polygon[i];
+    for point in transformed_points.iter() {
+        ws_points.push(render_context.world_to_screen(*point));
+    }
+
+    for i in 0..ws_points.len() {
+
+        let current = &transformed_points[i];
 
         let next =
-            &transformed_polygon[
-                (i + 1) % transformed_polygon.len()
+            &transformed_points[
+                (i + 1) % transformed_points.len()
             ];
 
-        canvas.draw_fline(
+        render_context.canvas.draw_fline(
             FPoint::new(current.x, current.y),
             FPoint::new(next.x, next.y),
         )?;
@@ -76,38 +95,43 @@ pub fn render_polygon(
 }
 
 pub fn render_filled_polygon(
-    canvas: &mut Canvas<Window>,
+    render_context: &mut RenderContext,
     position: &Pose2,
     polygon: &ConvexPolygon,
 ) -> Result<(), String> {
 
-    let mut polygon_points: Vec<Vec2>= vec![];
+    let mut transformed_points: Vec<Vec2>= vec![];
     for point in polygon.points() {
-        polygon_points.push(*position * *point);
+        transformed_points.push(*position * *point);
     }
 
-    let mut points = vec![];
-    for point in polygon_points.iter() {
-        points.push(FPoint::new(point.x, point.y));
+    let mut ws_points = vec![];
+    for point in transformed_points {
+        ws_points.push(render_context.world_to_screen(point));
     }
 
-    if points.len() < 3 {
+    let mut fpoints = vec![];
+    for point in ws_points.iter() {
+        fpoints.push(FPoint::new(point.x, point.y));
+    }
+
+    if fpoints.len() < 3 {
         return Ok(());
     }
 
     // Find bounding box
-    let min_y = points.iter().map(|p| p.y()).fold(f32::MAX, f32::min) as i32;
-    let max_y = points.iter().map(|p| p.y()).fold(f32::MIN, f32::max) as i32;
+    let min_y = fpoints.iter().map(|p| p.y()).fold(f32::MAX, f32::min) as i32;
+    let max_y = fpoints.iter().map(|p| p.y()).fold(f32::MIN, f32::max) as i32;
 
     // Scanline fill
     for y in min_y..=max_y {
         let y_f = y as f32;
         let mut intersections: Vec<f32> = Vec::new();
-        let n = points.len();
+        let n = fpoints.len();
 
         for i in 0..n {
-            let a = points[i];
-            let b = points[(i + 1) % n];
+            let a = fpoints[i];
+            let b = fpoints[(i + 1) % n];
             let ay = a.y();
             let by = b.y();
 
@@ -122,7 +146,7 @@ pub fn render_filled_polygon(
 
         for pair in intersections.chunks(2) {
             if pair.len() == 2 {
-                canvas.draw_fline(
+                render_context.canvas.draw_fline(
                     FPoint::new(pair[0], y_f),
                     FPoint::new(pair[1], y_f),
                 )?;
@@ -134,7 +158,7 @@ pub fn render_filled_polygon(
 }
 
 pub fn render_ball(
-    canvas: &mut Canvas<Window>,
+    render_context: &mut RenderContext,
     position: &Pose2,
     ball: &Ball,
 ) -> Result<(), String> {
@@ -167,7 +191,7 @@ pub fn render_ball(
             position.translation.y
             + ball.radius * theta2.sin();
 
-        canvas.draw_fline(
+        render_context.canvas.draw_fline(
             FPoint::new(x1, y1),
             FPoint::new(x2, y2),
         ).expect("render_ball failed");

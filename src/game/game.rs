@@ -1,32 +1,26 @@
 use rapier2d::prelude::*;
 
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::render::TextureCreator;
-use sdl2::video::Window;
+use sdl2::render::*;
+use sdl2::video::*;
 use sdl2::EventPump;
-use sdl2::video::WindowContext;
 
-use crate::physics_world::physics_world::PhysicsWorld;
-use crate::assets::ship_database::ShipDatabase;
+use crate::render_context::RenderContext;
+use crate::rendering::*;
+
+use crate::physics_world::PhysicsWorld;
+
+use crate::assets::ShipDatabase;
+
+use crate::game::input::*;
+
+use crate::entity::*;
+
 use crate::components::ShipClass;
-
-use crate::entity::EntityType;
-use crate::entity::factory::spawn_player;
-use crate::entity::Entity;
-use crate::game::input::exiting_debug_input;
-use crate::game::input::player_input;
-use crate::rendering::assets::Assets;
-use crate::rendering::primitives::render_ball;
-use crate::rendering::primitives::render_triangle;
-
 pub struct Game {
-    pub canvas: Canvas<Window>,
+    pub render_context: RenderContext,
     pub event_pump: EventPump,
     pub running: bool,
-    pub screen_width: u32,
-    pub screen_height: u32,
     pub debug_mode: bool,
     pub physics_world: PhysicsWorld,
     pub next_entity_id: usize,
@@ -37,10 +31,10 @@ pub struct Game {
 
 impl Game {
     pub fn new() -> Result<Self, String> {
-        let physics_world = PhysicsWorld::new(Vec2::new(0.0, -9.81));
+        let physics_world = PhysicsWorld::new(Vec2::ZERO);
 
-        let screen_width = 1920;
-        let screen_height = 1080;
+        let screen_width = 1366;
+        let screen_height = 768;
 
         //Initilize sdl2
         let sdl_context = sdl2::init().unwrap();
@@ -48,20 +42,20 @@ impl Game {
 
         //Create window
         let window = video_subsystem
-            .window("Rust!", screen_width, screen_height)
+            .window("WOG", screen_width, screen_height)
             .fullscreen()
             .build()
             .unwrap();
 
         //Create canvas
-        let mut canvas = window
+        let canvas = window
             .into_canvas()
             .present_vsync()
             .build()
             .unwrap();
 
-        let clear_color = Color::RGB(64, 192, 255);
-        canvas.set_draw_color(clear_color);
+        let render_context = 
+            RenderContext::new(canvas, screen_width, screen_height);
 
         //Event pump
         let event_pump = sdl_context.event_pump().unwrap();
@@ -77,14 +71,12 @@ impl Game {
 
 
         Ok(Self {
-            canvas,
-            event_pump,
+            render_context,
             physics_world,
+            event_pump,
             next_entity_id,
             entities,
             running: true,
-            screen_width,
-            screen_height,
             debug_mode:false,
             player_index: None,
             ship_database,
@@ -94,7 +86,7 @@ impl Game {
 
     pub fn run(&mut self) -> Result<(), String> {
         //texture creator
-        let texture_creator = self.canvas.texture_creator();
+        let texture_creator = self.render_context.canvas.texture_creator();
 
         //making assets
         let mut assets = Assets::new();
@@ -115,7 +107,7 @@ impl Game {
 
             self.debug_render()?;
 
-            self.canvas.present();
+            self.render_context.present();
         }
 
         Ok(())
@@ -156,8 +148,8 @@ impl Game {
             spawn_player(
                 self.next_entity_id,
                 Vec2::new(
-                    self.screen_width as f32 /2.0,
-                    self.screen_height as f32 /2.0
+                    0.0,
+                    0.0
                 ),
                 ShipClass::Scout,
                 &self.ship_database,
@@ -191,21 +183,11 @@ impl Game {
     pub fn update_player_velocity(&mut self) {
     }
 
-    pub fn render(&mut self, assets: &Assets) -> Result<(), String> {
-        self.canvas.set_draw_color(Color::RGB(64, 192, 255));
-
-        self.canvas.clear();
-
-        let _ = self
-            .canvas
-            .fill_rect(
-                Rect::new(
-                    0,
-                    0,
-                    self.screen_width,
-                    self.screen_height
-                )
-            );
+    pub fn render(
+        &mut self,
+        assets: &Assets,
+        ) -> Result<(), String> {
+        self.render_context.clear(Color::RGB(64, 192, 255));
 
         for entity in self.entities.iter() {
             match entity.entity_type {
@@ -224,7 +206,7 @@ impl Game {
             return Ok(())
         }
 
-        self.canvas.set_draw_color(Color::RGB(100, 0, 100));
+        self.render_context.canvas.set_draw_color(Color::RGB(100, 0, 100));
 
         for entity in self.entities.iter(){
             let entity_rigid_body = 
@@ -245,7 +227,7 @@ impl Game {
                 match shape.as_typed_shape() {
                     TypedShape::Ball(ball) => {
                         render_ball(
-                            &mut self.canvas,
+                            &mut self.render_context,
                             entity_rigid_body.position(),
                             ball
                         )?
@@ -253,7 +235,7 @@ impl Game {
 
                     TypedShape::Triangle(tri) => {
                         render_triangle(
-                            &mut self.canvas,
+                            &mut self.render_context,
                             entity_rigid_body.position(),
                             tri,
                             )?
