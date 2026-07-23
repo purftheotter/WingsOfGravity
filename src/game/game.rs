@@ -16,6 +16,8 @@ use crate::game::input::*;
 
 use crate::entity::*;
 
+use crate::systems::ship_movement::*;
+
 use crate::components::ShipClass;
 pub struct Game {
     pub render_context: RenderContext,
@@ -99,9 +101,11 @@ impl Game {
 
             self.handle_input();
 
-            self.update_player_velocity();
+            self.update_ship_forces();
 
             self.physics_world.step();
+
+            self.sync_position();
 
             self.render(&assets).expect("Render Failed");
 
@@ -147,8 +151,8 @@ impl Game {
         self.entities.push(
             spawn_player(
                 self.next_entity_id,
-                Vec2::new(
-                    0.0,
+                Pose2::new(
+                    Vec2::new(0.0, 0.0),
                     0.0
                 ),
                 ShipClass::Scout,
@@ -180,7 +184,27 @@ impl Game {
 
     }
 
-    pub fn update_player_velocity(&mut self) {
+    pub fn update_ship_forces(&mut self) {
+        for entity in self.entities.iter() {
+            if let Some(ship) = &entity.ship_component {
+                let ship_stats = self.ship_database.get(ship.class);
+                apply_ship_movements(
+                    &mut self.physics_world,
+                    entity,
+                    ship_stats
+                    );
+            }
+        }
+    }
+
+    pub fn sync_position(&mut self) {
+        for entity in self.entities.iter_mut() {
+            let rigid_body = 
+                self.physics_world.rigid_body_set
+                .get(entity.rigid_body_handle)
+                .unwrap();
+            entity.position = *rigid_body.position();
+        }
     }
 
     pub fn render(
@@ -191,9 +215,15 @@ impl Game {
 
         for entity in self.entities.iter() {
             match entity.entity_type {
-                    
+                EntityType::Ship => {
+                    render_ship(
+                        entity,
+                        &mut self.render_context,
+                        assets,
+                        &self.ship_database
+                        )?
+                }
                 EntityType::Asteroid => {}
-                EntityType::Ship => {}
                 EntityType::Projectile => {}
             }
         }

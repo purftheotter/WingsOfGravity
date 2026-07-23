@@ -9,7 +9,7 @@ use crate::entity::{Entity,EntityType};
 
 pub fn spawn_player(
     entity_id: usize,
-    spawn_point:Vec2,
+    spawn_pos:Pose2,
     class: ShipClass,
     ship_database: &ShipDatabase,
     rigidbody_set: &mut RigidBodySet,
@@ -17,7 +17,7 @@ pub fn spawn_player(
     ) -> Entity {
 
     let rigid_body = RigidBodyBuilder::dynamic()
-        .translation(spawn_point)
+        .translation(spawn_pos.translation)
         .build();
 
     let rigid_body_handle = rigidbody_set.insert(rigid_body);
@@ -25,6 +25,7 @@ pub fn spawn_player(
     let player_entity = Entity {
         entity_id,
         rigid_body_handle,
+        position: spawn_pos,
         entity_type: EntityType::Ship,
         ship_component: Some(ShipComponent {
             class: class,
@@ -64,9 +65,9 @@ pub fn spawn_prjectile(
     if let Some(impulse) = impusle_magnitude {
         let local_forward =
             Vec2::new(0.0, impulse);
-        let impusle_vec =
+        let world_impusle =
             rigid_body.rotation().transform_vector(local_forward);
-        rigid_body.apply_impulse(impusle_vec, true);
+        rigid_body.apply_impulse(world_impusle, true);
     }
 
     let rigid_body_handle = rigidbody_set.insert(rigid_body);
@@ -87,6 +88,7 @@ pub fn spawn_prjectile(
     let projectile = Entity {
         entity_id,
         rigid_body_handle,
+        position: spawn_pos,
         entity_type: EntityType::Projectile,
         ship_component: None,
         projectile: Some(

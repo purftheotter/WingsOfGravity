@@ -13,7 +13,7 @@ pub struct ShipComponent {
     pub input: ShipInput,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 pub struct ShipStats {
 
     pub thrust: f32,
