@@ -1,11 +1,12 @@
 
 use rapier2d::prelude::*;
 
-use crate::assets::ship_database::ShipDatabase;
-use crate::components::projectile::{Projectile, ProjectileType};
+use crate::assets::ShipDatabase;
+use crate::components::projectile::*;
 use crate::components::ship::ShipInput;
-use crate::components::{ShipComponent, ShipClass};
-use crate::entity::{Entity,EntityType};
+use crate::components::*;
+use crate::entity::*;
+use crate::components::asteroid::*;
 
 pub fn spawn_player(
     entity_id: usize,
@@ -32,12 +33,13 @@ pub fn spawn_player(
             input: ShipInput::new(),
         }),
         projectile: None,
+        asteroid: None
 
     };
 
     let ship_stats = ship_database.get(class);
 
-    let collider = ColliderBuilder::new(ship_stats.hitbox.clone());
+    let collider = ColliderBuilder::new(ship_stats.hitbox.clone()).build();
 
     collider_set.insert_with_parent(collider, rigid_body_handle, rigidbody_set);
 
@@ -85,6 +87,7 @@ pub fn spawn_prjectile(
         _ => {}
         
     }
+
     let projectile = Entity {
         entity_id,
         rigid_body_handle,
@@ -97,9 +100,57 @@ pub fn spawn_prjectile(
                 damage: damage,
             }
         ),
+        asteroid: None
 
     };
 
     projectile
 
 }
+
+//------------------------------------------------------
+
+pub fn spawn_asteroid(
+    entity_id: usize,
+    rigid_body_set: &mut RigidBodySet,
+    collider_set: &mut ColliderSet,
+    spawn_pos:Pose2,
+    subdivisions: usize,
+    radius:f32,
+) -> Entity {
+
+    let rigid_body = RigidBodyBuilder::dynamic()
+        .pose(spawn_pos)
+        .build();
+
+    let rigid_body_handle = rigid_body_set.insert(rigid_body);
+
+    let entity = Entity {
+        entity_id,
+        rigid_body_handle,
+        position: spawn_pos,
+        entity_type: EntityType::Asteroid,
+        ship_component: None,
+        projectile: None,
+        asteroid: Some(Asteroid::new(
+                collider_set,
+                subdivisions,
+                radius,
+                entity_id as u32,
+                "asteroid".to_string()
+        ))
+    };
+
+    let asteroid = entity.asteroid.as_ref().unwrap();
+
+    collider_set.insert_with_parent(
+        asteroid.build_asteroid_collider(),
+        rigid_body_handle,
+        rigid_body_set
+    );
+
+    entity
+    
+}
+
+

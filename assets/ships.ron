@@ -1,16 +1,19 @@
 (
   scout: (
-    thrust:500.0,
-    torque:500.0,
+    thrust:15.0,
+    torque:20.0,
 
     linear_drag:0.8,
     angular_drag:1.0,
 
     texture_id:"fighter",
+
+    scale:2.0,
+
     hitbox: Triangle((
-      a: (0.0, -5.0),
-      b: (5.0, 0.0),
-      c: (-5.0, 0.0),
+      a: (0.0, -1.0),
+      b: (1.0, 1),
+      c: (-1.0, 1),
     ))
   ),
 
@@ -21,8 +24,9 @@
     linear_drag:0.8,
     angular_drag:1.5,
     texture_id:"fighter",
+    scale:2.0,
     hitbox: Triangle((
-      a: (0.0, -13.86),
+      a: (0.0, -1.0),
       b: (16.0, 13.86),
       c: (-16.0, 13.86),
     ))
@@ -35,6 +39,9 @@
     angular_drag:2.0,
 
     texture_id:"fighter",
+    
+    scale:3.0,
+
     hitbox: Triangle((
       a: (0.0, -13.86),
       b: (16.0, 13.86),

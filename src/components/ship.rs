@@ -22,6 +22,7 @@ pub struct ShipStats {
     pub hitbox:SharedShape,
 
     pub texture_id: String,
+    pub scale: f32,
 }
 
 

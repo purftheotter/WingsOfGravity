@@ -1,6 +1,7 @@
 use rapier2d::geometry::*;
 use rapier2d::math::*;
 use rapier2d::parry::transformation::utils::transformed;
+use crate::render_context;
 use crate::render_context::RenderContext;
 use sdl2::rect::FPoint;
 
@@ -58,7 +59,7 @@ pub fn render_triangle(
 }
 
 
-pub fn render_polygon(
+pub fn render_convex_polygon(
     render_context: &mut RenderContext,
     position: &Pose2,
     polygon: &ConvexPolygon,
@@ -78,10 +79,10 @@ pub fn render_polygon(
 
     for i in 0..ws_points.len() {
 
-        let current = &transformed_points[i];
+        let current = &ws_points[i];
 
         let next =
-            &transformed_points[
+            &ws_points[
                 (i + 1) % transformed_points.len()
             ];
 
@@ -159,44 +160,79 @@ pub fn render_filled_polygon(
 
 pub fn render_ball(
     render_context: &mut RenderContext,
-    position: &Pose2,
+    pos: &Pose2,
     ball: &Ball,
 ) -> Result<(), String> {
 
     let segments = 32;
 
     for i in 0..segments {
+        let theta1 = (i as f32 / segments as f32) * std::f32::consts::TAU;
+        let theta2 = ((i + 1) as f32 / segments as f32) * std::f32::consts::TAU;
 
-        let theta1 =
-            (i as f32 / segments as f32)
-            * std::f32::consts::TAU;
+        let world1 = Vec2::new(
+            pos.translation.x + ball.radius * theta1.cos(),
+            pos.translation.y + ball.radius * theta1.sin(),
+        );
+        let world2 = Vec2::new(
+            pos.translation.x + ball.radius * theta2.cos(),
+            pos.translation.y + ball.radius * theta2.sin(),
+        );
 
-        let theta2 =
-            ((i + 1) as f32 / segments as f32)
-            * std::f32::consts::TAU;
-
-        let x1 =
-            position.translation.x
-            + ball.radius * theta1.cos();
-
-        let y1 =
-            position.translation.y
-            + ball.radius * theta1.sin();
-
-        let x2 =
-            position.translation.x
-            + ball.radius * theta2.cos();
-
-        let y2 =
-            position.translation.y
-            + ball.radius * theta2.sin();
+        let screen1 = render_context.world_to_screen(world1);
+        let screen2 = render_context.world_to_screen(world2);
 
         render_context.canvas.draw_fline(
-            FPoint::new(x1, y1),
-            FPoint::new(x2, y2),
+            FPoint::new(screen1.x, screen1.y),
+            FPoint::new(screen2.x, screen2.y),
         ).expect("render_ball failed");
     }
 
     Ok(())
 }
 
+pub fn render_compound(
+    render_context: &mut RenderContext,
+    position: &Pose2,
+    compound: &Compound
+) -> Result<(), String> {
+    for shape in compound.shapes() {
+        let shape_pos = &(position * &shape.0);
+        match shape.1.as_typed_shape() {
+            TypedShape::Ball(ball) => {
+                render_ball(
+                    render_context,
+                    shape_pos,
+                    ball
+                )?
+            }
+
+            TypedShape::Triangle(triangle) => {
+                render_triangle(
+                    render_context,
+                    shape_pos,
+                    triangle
+                )?
+            }
+
+            TypedShape::ConvexPolygon(polygon) => {
+                render_convex_polygon(
+                    render_context,
+                    shape_pos,
+                    polygon
+                )?
+            }
+
+            TypedShape::Compound(compound) => {
+                render_compound(
+                    render_context,
+                    shape_pos, 
+                    compound
+                )?
+            }
+            
+            _ => {}
+        }
+    }
+    Ok(())
+}

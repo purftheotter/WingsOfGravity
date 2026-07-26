@@ -7,6 +7,7 @@ use sdl2::EventPump;
 
 use crate::render_context::RenderContext;
 use crate::rendering::*;
+use crate::rendering::debug::*;
 
 use crate::physics_world::PhysicsWorld;
 
@@ -19,6 +20,7 @@ use crate::entity::*;
 use crate::systems::ship_movement::*;
 
 use crate::components::ShipClass;
+
 pub struct Game {
     pub render_context: RenderContext,
     pub event_pump: EventPump,
@@ -57,7 +59,12 @@ impl Game {
             .unwrap();
 
         let render_context = 
-            RenderContext::new(canvas, screen_width, screen_height);
+            RenderContext::new(
+                canvas,
+                screen_width,
+                screen_height,
+                32.0,
+                );
 
         //Event pump
         let event_pump = sdl_context.event_pump().unwrap();
@@ -165,6 +172,21 @@ impl Game {
 
         self.next_entity_id += 1;
 
+        //spawn_asteroid
+        self.entities.push(
+            spawn_asteroid(
+                self.next_entity_id,
+                &mut self.physics_world.rigid_body_set,
+                &mut self.physics_world.collider_set,
+                Pose2::new(
+                    Vec2::new(10.0, 10.0),
+                    0.0),
+                6,
+                10.0
+                
+            )
+        );
+
         Ok(())
     }
 
@@ -236,45 +258,15 @@ impl Game {
             return Ok(())
         }
 
-        self.render_context.canvas.set_draw_color(Color::RGB(100, 0, 100));
+        self.render_context.canvas
+            .set_draw_color(Color::RGB(100, 0, 100));
 
         for entity in self.entities.iter(){
-            let entity_rigid_body = 
-                self.physics_world.rigid_body_set
-                    .get_mut(entity.rigid_body_handle)
-                    .unwrap();
-            let entity_collider_handles:&[ColliderHandle] = 
-                entity_rigid_body.colliders();
-            let mut entity_colliders = vec![];
-            for handle in entity_collider_handles {
-                entity_colliders
-                    .push(self.physics_world.collider_set.get(*handle).unwrap());
-            }
-
-            for collider in entity_colliders {
-                let shape = collider.shape();
-                
-                match shape.as_typed_shape() {
-                    TypedShape::Ball(ball) => {
-                        render_ball(
-                            &mut self.render_context,
-                            entity_rigid_body.position(),
-                            ball
-                        )?
-                    }
-
-                    TypedShape::Triangle(tri) => {
-                        render_triangle(
-                            &mut self.render_context,
-                            entity_rigid_body.position(),
-                            tri,
-                            )?
-                    }
-
-                    _ => {}
-                    
-                }
-            }
+            render_hitbox(
+                entity,
+                &self.physics_world,
+                &mut self.render_context
+                )?
         }
 
         Ok(())  

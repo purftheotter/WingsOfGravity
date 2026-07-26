@@ -18,12 +18,13 @@ impl RenderContext {
         canvas: Canvas<Window>,
         screen_width:u32,
         screen_height:u32,
+        pixels_per_meter:f32,
         ) -> Self {
         Self { 
             canvas, 
             screen_width, 
             screen_height, 
-            pixels_per_meter: 5.0,
+            pixels_per_meter,
             camera_position: Vec2::new(0.0, 0.0)
         }
     }
