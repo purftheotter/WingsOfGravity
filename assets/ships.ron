@@ -8,7 +8,7 @@
 
     texture_id:"fighter",
 
-    scale:2.0,
+    size:(2.0, 2.0),
 
     hitbox: Triangle((
       a: (0.0, -1.0),
@@ -24,7 +24,9 @@
     linear_drag:0.8,
     angular_drag:1.5,
     texture_id:"fighter",
-    scale:2.0,
+
+    size:(2.0, 2.0),
+    
     hitbox: Triangle((
       a: (0.0, -1.0),
       b: (16.0, 13.86),
@@ -40,7 +42,7 @@
 
     texture_id:"fighter",
     
-    scale:3.0,
+    size:(2.0, 2.0),
 
     hitbox: Triangle((
       a: (0.0, -13.86),

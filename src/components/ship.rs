@@ -1,4 +1,4 @@
-use rapier2d::geometry::SharedShape;
+use rapier2d::{geometry::SharedShape, math::Vec2};
 
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, serde::Deserialize)]
@@ -22,7 +22,7 @@ pub struct ShipStats {
     pub hitbox:SharedShape,
 
     pub texture_id: String,
-    pub scale: f32,
+    pub size: Vec2,
 }
 
 
