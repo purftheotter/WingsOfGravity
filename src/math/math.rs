@@ -1,11 +1,9 @@
 use std::usize;
 
-
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PolarIndex {
-    ring: usize,
-    point: usize,
+    pub ring: usize,
+    pub point: usize,
 }
 
 impl PolarIndex {

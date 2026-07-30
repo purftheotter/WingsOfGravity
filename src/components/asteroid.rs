@@ -6,8 +6,11 @@ use rapier2d::geometry::*;
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
+use std::usize;
 
 use crate::math::math::PolarIndex;
+use crate::physics_world::collision_groups::collision_groups::ASTEROID_VERT;
+use crate::physics_world::collision_groups::collision_groups::BULLET;
 
 pub struct Asteroid {
     pub terrain_verts: Vec<AsteroidVert>,
@@ -23,6 +26,7 @@ impl Asteroid {
         subdivisions: usize,
         radius: f32,
         seed: u32,
+        noise_strength: f32,
         sprite_id: String,
         ) -> Self {
 
@@ -36,7 +40,8 @@ impl Asteroid {
             collider_set,
             &subdivisions,
             radius,
-            &noise
+            &noise,
+            noise_strength,
         );
         let index_map = terrain_verts.iter()
             .enumerate()
@@ -56,11 +61,21 @@ impl Asteroid {
         subdivisions: &usize,
         base_radius:f32,
         noise: &Fbm<Perlin>,
+        noise_strength: f32,
     ) -> (Vec<AsteroidVert>, Vec<PolarIndex>){
         let mut verticies:Vec<AsteroidVert> =  vec![];
         let mut boundary:Vec<PolarIndex> = vec![];
 
         let subdivisions = *subdivisions;
+
+        let center_index = PolarIndex::new(0, 0);
+        verticies.push(
+            AsteroidVert::new(
+                collider_set,
+                Vec2::new(0.0, 0.0),
+                center_index
+            )
+        );
 
         for i in 0..subdivisions{
             let ring_radius =
@@ -78,7 +93,7 @@ impl Asteroid {
                 let displacement = Asteroid::radius_displacement(
                     noise,
                     angle,
-                    0.2
+                    noise_strength
                 );
 
                 let radius = ring_radius * (1.0 + displacement);
@@ -90,7 +105,13 @@ impl Asteroid {
 
                 let polar_idx = PolarIndex::new(i, j);
 
-                verticies.push(AsteroidVert::new(collider_set, local_transform, polar_idx));
+                verticies.push(
+                    AsteroidVert::new(
+                        collider_set,
+                        local_transform,
+                        polar_idx
+                    )
+                );
 
                 if i == subdivisions - 1 {
                     boundary.push(polar_idx)
@@ -101,7 +122,8 @@ impl Asteroid {
         (verticies, boundary)
     }
 
-    pub fn build_asteroid_collider(&self) -> Collider {
+    pub fn build_asteroid_collider(&mut self) -> Collider {
+        self.build_boundary();
         let outline: Vec<Vec2> = self.boundary.iter()
             .map(|polar_index| {
                 let array_pos = self.index_map[polar_index];
@@ -113,7 +135,7 @@ impl Asteroid {
         ColliderBuilder::convex_decomposition(
             &outline,
             &Asteroid::build_polyline_indices(outline.len()),
-            ).build()
+            ).restitution(0.2).build()
     }
 
     pub fn build_polyline_indices(outline_len: usize) -> Vec<[u32; 2]> {
@@ -122,12 +144,104 @@ impl Asteroid {
             .collect()
     }
 
-    fn radius_displacement(noise:&Fbm<Perlin>, angle: f32, wobble_strength: f32) -> f32 {
+    pub fn build_boundary(&mut self){
+        let mut new_boundary:Vec<PolarIndex> = vec![];
+        for polar_index in self.boundary.iter() {
+            let array_pos = self.index_map[polar_index];
+            if self.terrain_verts[array_pos].destroyed {
+                new_boundary.append(
+                    &mut self.find_intact_vert(&polar_index)
+                );
+            }else {
+                new_boundary.push(*polar_index);
+            }
+        }
+        self.boundary = new_boundary;
+    }
+
+    pub fn radius_displacement(noise:&Fbm<Perlin>, angle: f32, wobble_strength: f32) -> f32 {
         let sample_x = angle.cos() as f64;
         let sample_y = angle.sin() as f64;
 
         let raw_dis = noise.get([sample_x, sample_y]);
         raw_dis as f32 * wobble_strength
+    }
+
+    pub fn find_intact_vert(
+        &self,
+        polar_index: &PolarIndex
+    ) -> Vec<PolarIndex> {
+    let array_pos = self.index_map[polar_index];
+
+    if !self.terrain_verts[array_pos].destroyed {
+        return vec![*polar_index];
+    }
+
+    if polar_index.ring == 0 {
+        return vec![*polar_index];
+    }
+
+    let from_segments = 6 * polar_index.ring;
+    let to_ring = polar_index.ring - 1;
+    let to_segments = if to_ring == 0 { 1 } else { 6 * to_ring };
+
+    let candidates = Asteroid::remap_point(
+        polar_index.point,
+        from_segments,
+        to_segments,
+    );
+
+    let mut intact_verts = vec![];
+
+    for point in candidates {
+        let point = if to_ring == 0 { 0 } else { point };
+        let next_index = PolarIndex::new(to_ring, point);
+        let resolved_verts = self.find_intact_vert(&next_index);
+
+        for vert in resolved_verts.iter() {
+            let resolved_pos = self.index_map[&vert];
+            if !self.terrain_verts[resolved_pos].destroyed {
+                intact_verts.push(*vert); 
+            }
+        }
+        
+
+    }
+
+    intact_verts
+
+}
+    
+    pub fn remap_point(point: usize, from_segment:usize, to_segment:usize) -> Vec<usize> {
+        if to_segment == 0 {
+            return vec![0];
+        }
+
+        let scaled = point as f32 * to_segment as f32 / from_segment as f32;
+        let lower = (scaled.floor() as usize) % to_segment;
+        let upper = (scaled.ceil() as usize) % to_segment;
+
+        if lower == upper {
+            vec![lower]
+        }else {
+            vec![lower, upper]
+        }
+    }
+
+    pub fn update_asteroid(
+        &mut self,
+        narrow_phase: &NarrowPhase,
+    ){
+        let mut verts_changed: bool = false;
+        for vert in self.terrain_verts.iter_mut() {
+            if vert.update_vert(narrow_phase) {
+                verts_changed = true;
+            }
+        }
+        
+        if verts_changed{
+            self.build_boundary();
+        }
     }
 
 }
@@ -137,7 +251,7 @@ pub struct AsteroidVert {
     pub local_transform: Vec2,
     pub index: PolarIndex,
     pub sensor_handle: ColliderHandle,
-    pub destroid: bool,
+    pub destroyed: bool,
 }
 
 impl AsteroidVert {
@@ -148,10 +262,28 @@ impl AsteroidVert {
         ) -> Self{
         let sensor = ColliderBuilder::ball(1.0)
             .sensor(true)
+            .collision_groups(InteractionGroups::new(
+                    ASTEROID_VERT,
+                    ASTEROID_VERT|BULLET,
+                    InteractionTestMode::And,
+                    ))
             .build();
         let sensor_handle = collider_set.insert(sensor);
 
-        Self { local_transform, index, sensor_handle, destroid: false}
+        Self { local_transform, index, sensor_handle, destroyed: false}
+    }
+
+    pub fn update_vert(&mut self, narrow_phase: &NarrowPhase) -> bool{
+        let is_intersecting = narrow_phase
+            .intersection_pairs_with(self.sensor_handle)
+            .any(|(_,_, intersecting)| intersecting);
+
+        if is_intersecting {
+            self.destroyed = true;
+            true
+        }else {
+            false
+        }
     }
     
 }

@@ -1,7 +1,7 @@
 (
   scout: (
     thrust:15.0,
-    torque:20.0,
+    torque:15.0,
 
     linear_drag:0.8,
     angular_drag:1.0,

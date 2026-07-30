@@ -63,7 +63,7 @@ impl Game {
                 canvas,
                 screen_width,
                 screen_height,
-                32.0,
+                16.0,
                 );
 
         //Event pump
@@ -108,7 +108,7 @@ impl Game {
 
             self.handle_input();
 
-            self.update_ship_forces();
+            self.update_entities();
 
             self.physics_world.step();
 
@@ -181,9 +181,9 @@ impl Game {
                 Pose2::new(
                     Vec2::new(10.0, 10.0),
                     0.0),
-                6,
-                10.0
-                
+                3,
+                10.0,
+                0.0,
             )
         );
 
@@ -206,8 +206,8 @@ impl Game {
 
     }
 
-    pub fn update_ship_forces(&mut self) {
-        for entity in self.entities.iter() {
+    pub fn update_entities(&mut self) {
+        for entity in self.entities.iter_mut() {
             if let Some(ship) = &entity.ship_component {
                 let ship_stats = self.ship_database.get(ship.class);
                 apply_ship_movements(
@@ -215,6 +215,11 @@ impl Game {
                     entity,
                     ship_stats
                     );
+            }
+            if let Some(asteroid) = &mut entity.asteroid {
+                //asteroid.update_asteroid(
+                //    &self.physics_world.narrow_phase
+                //    );
             }
         }
     }

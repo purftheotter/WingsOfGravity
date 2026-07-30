@@ -7,6 +7,10 @@ use crate::components::ship::ShipInput;
 use crate::components::*;
 use crate::entity::*;
 use crate::components::asteroid::*;
+use crate::physics_world::collision_groups::collision_groups::ASTEROID_HULL;
+use crate::physics_world::collision_groups::collision_groups::ASTEROID_VERT;
+use crate::physics_world::collision_groups::collision_groups::BULLET;
+use crate::physics_world::collision_groups::collision_groups::SHIP;
 
 pub fn spawn_player(
     entity_id: usize,
@@ -39,7 +43,15 @@ pub fn spawn_player(
 
     let ship_stats = ship_database.get(class);
 
-    let collider = ColliderBuilder::new(ship_stats.hitbox.clone()).build();
+    let collider = 
+        ColliderBuilder::new(
+            ship_stats.hitbox.clone()
+        ).collision_groups(InteractionGroups::new(
+            SHIP,
+            SHIP | ASTEROID_HULL,
+            InteractionTestMode::And,
+            ))
+        .build();
 
     collider_set.insert_with_parent(collider, rigid_body_handle, rigidbody_set);
 
@@ -76,7 +88,12 @@ pub fn spawn_prjectile(
 
     match projectile_type {
         ProjectileType::Bullet => {
-            let collider = ColliderBuilder::ball(0.05);
+            let collider = ColliderBuilder::ball(0.05)
+                .collision_groups(InteractionGroups::new(
+                        BULLET,
+                        BULLET|ASTEROID_VERT,
+                        InteractionTestMode::And,
+                        ));
             collider_set.insert_with_parent(
                 collider,
                 rigid_body_handle, 
@@ -114,9 +131,10 @@ pub fn spawn_asteroid(
     entity_id: usize,
     rigid_body_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
-    spawn_pos:Pose2,
+    spawn_pos: Pose2,
     subdivisions: usize,
-    radius:f32,
+    radius: f32,
+    noise_strength: f32,
 ) -> Entity {
 
     let rigid_body = RigidBodyBuilder::dynamic()
@@ -125,7 +143,7 @@ pub fn spawn_asteroid(
 
     let rigid_body_handle = rigid_body_set.insert(rigid_body);
 
-    let entity = Entity {
+    let mut entity = Entity {
         entity_id,
         rigid_body_handle,
         position: spawn_pos,
@@ -137,11 +155,12 @@ pub fn spawn_asteroid(
                 subdivisions,
                 radius,
                 entity_id as u32,
+                noise_strength,
                 "asteroid".to_string()
         ))
     };
 
-    let asteroid = entity.asteroid.as_ref().unwrap();
+    let asteroid = entity.asteroid.as_mut().unwrap();
 
     collider_set.insert_with_parent(
         asteroid.build_asteroid_collider(),
