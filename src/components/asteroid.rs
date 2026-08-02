@@ -6,11 +6,9 @@ use rapier2d::geometry::*;
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::usize;
 
 use crate::math::math::PolarIndex;
-use crate::physics_world::collision_groups::collision_groups::ASTEROID_VERT;
-use crate::physics_world::collision_groups::collision_groups::BULLET;
+use crate::physics_world::*;
 
 pub struct Asteroid {
     pub terrain_verts: Vec<AsteroidVert>,
@@ -19,8 +17,15 @@ pub struct Asteroid {
     pub sprite_id: Option<String>,
 }
 
-impl Asteroid {
+pub struct AsteroidVert {
+    pub local_transform: Vec2,
+    pub index: PolarIndex,
+    pub sensor_handle: ColliderHandle,
+    pub destroyed: bool,
+}
 
+
+impl Asteroid {
     pub fn new(
         collider_set: &mut ColliderSet,
         subdivisions: usize,
@@ -204,12 +209,10 @@ impl Asteroid {
                 intact_verts.push(*vert); 
             }
         }
-        
 
     }
 
     intact_verts
-
 }
     
     pub fn remap_point(point: usize, from_segment:usize, to_segment:usize) -> Vec<usize> {
@@ -241,17 +244,10 @@ impl Asteroid {
         
         if verts_changed{
             self.build_boundary();
+            println!("oh dear");
         }
     }
 
-}
-
-
-pub struct AsteroidVert {
-    pub local_transform: Vec2,
-    pub index: PolarIndex,
-    pub sensor_handle: ColliderHandle,
-    pub destroyed: bool,
 }
 
 impl AsteroidVert {
@@ -266,11 +262,12 @@ impl AsteroidVert {
                     ASTEROID_VERT,
                     ASTEROID_VERT|BULLET,
                     InteractionTestMode::And,
-                    ))
+                ))
             .build();
         let sensor_handle = collider_set.insert(sensor);
 
         Self { local_transform, index, sensor_handle, destroyed: false}
+
     }
 
     pub fn update_vert(&mut self, narrow_phase: &NarrowPhase) -> bool{

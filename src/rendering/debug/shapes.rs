@@ -51,10 +51,6 @@ pub fn render_triangle(
     render_context.canvas.draw_fline(b_fpoint, c_fpoint)?;
     render_context.canvas.draw_fline(c_fpoint, a_fpoint)?;
 
-    println!("{:?}", position);
-
-    println!("a: {:?}, b: {:?}, c: {:?}", a_fpoint, b_fpoint, c_fpoint);
-
     Ok(())
 }
 

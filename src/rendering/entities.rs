@@ -30,7 +30,6 @@ pub fn render_ship(
             render_context.world_to_screen_scale(world_width);
         let screen_height = 
             render_context.world_to_screen_scale(world_height);
-        println!("{:?},{:?}", world_width, world_height);
 
         render_context.canvas.copy_ex_f(
             texture,

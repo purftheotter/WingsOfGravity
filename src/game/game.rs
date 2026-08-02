@@ -1,5 +1,7 @@
 use rapier2d::prelude::*;
 
+use std::time::Instant;
+
 use sdl2::pixels::Color;
 use sdl2::render::*;
 use sdl2::video::*;
@@ -104,13 +106,26 @@ impl Game {
 
         self.load_world()?;
 
+        //setup for making the loop run at a consistent rate
+        let mut last_frame = Instant::now();
+
         while self.running {
+            
+            let current_frame = Instant::now();
+
+            let dt = current_frame.duration_since(last_frame).as_secs_f32();
+
+            last_frame = current_frame;
 
             self.handle_input();
 
-            self.update_entities();
+            self.update_ships(dt);
+
+            self.update_weapons(dt);
 
             self.physics_world.step();
+
+            self.update_asteroid();
 
             self.sync_position();
 
@@ -191,7 +206,6 @@ impl Game {
     }
 
     pub fn handle_input(&mut self) {
-
         if let Some(player_index) = self.player_index {
             let mut player = &mut self.entities[player_index];
             let keyboard_state = &self.event_pump.keyboard_state();
@@ -203,12 +217,16 @@ impl Game {
             &mut self.debug_mode,
             &mut self.running
         );
-
     }
 
-    pub fn update_entities(&mut self) {
+    pub fn update_ships(&mut self, dt:f32) {
         for entity in self.entities.iter_mut() {
-            if let Some(ship) = &entity.ship_component {
+            if let Some(ship) = &mut entity.ship_component {
+
+                for weapon in ship.weapons.iter_mut() {
+                    weapon.tick(dt);
+                }
+
                 let ship_stats = self.ship_database.get(ship.class);
                 apply_ship_movements(
                     &mut self.physics_world,
@@ -216,12 +234,45 @@ impl Game {
                     ship_stats
                     );
             }
+        }
+    }
+
+    pub fn update_asteroid(&mut self) {
+        for entity in self.entities.iter_mut() {
             if let Some(asteroid) = &mut entity.asteroid {
-                //asteroid.update_asteroid(
-                //    &self.physics_world.narrow_phase
-                //    );
+                asteroid.update_asteroid(
+                    &self.physics_world.narrow_phase
+                );
+            }
+
+        }
+    }
+
+    pub fn update_weapons(&mut self, dt: f32) {
+        let mut new_projectiles:Vec<Entity> = vec![];
+        for entity in self.entities.iter_mut() {
+            if let Some(ship) = &mut entity.ship_component {
+                if ship.input.primary_fire {
+                    let weapon = &mut ship.weapons[0];
+                    if weapon.fire(dt) {
+                        let entity = fire_prjectile(
+                            self.next_entity_id,
+                            entity.position * weapon.local_offset,
+                            Some(weapon.init_vel_mag),
+                            weapon,
+                            &mut self.physics_world.rigid_body_set,
+                            &mut self.physics_world.collider_set
+                        );
+                        println!("ping");
+
+                        new_projectiles.push(entity);
+                        self.next_entity_id += 1;
+
+                    }
+                }
             }
         }
+        self.entities.append(&mut new_projectiles);
     }
 
     pub fn sync_position(&mut self) {
@@ -275,6 +326,5 @@ impl Game {
         }
 
         Ok(())  
-
     }
 }

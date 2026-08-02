@@ -1,5 +1,7 @@
 use rapier2d::{geometry::SharedShape, math::Vec2};
 
+use crate::components::weapons::Weapon;
+
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum ShipClass {
@@ -11,6 +13,7 @@ pub enum ShipClass {
 pub struct ShipComponent {
     pub class: ShipClass,
     pub input: ShipInput,
+    pub weapons: Vec<Weapon>,
 }
 
 #[derive(Clone, serde::Deserialize)]
@@ -37,6 +40,7 @@ impl ShipInput {
     pub fn zero(&mut self) {
         self.thrust = 0.0;
         self.turn = 0.0;
+        self.primary_fire = false;
         
     }
 

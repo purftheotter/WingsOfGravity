@@ -2,15 +2,13 @@
 use rapier2d::prelude::*;
 
 use crate::assets::ShipDatabase;
-use crate::components::projectile::*;
+use crate::components::projectile::Projectile;
 use crate::components::ship::ShipInput;
+use crate::components::weapons::Weapon;
 use crate::components::*;
 use crate::entity::*;
 use crate::components::asteroid::*;
-use crate::physics_world::collision_groups::collision_groups::ASTEROID_HULL;
-use crate::physics_world::collision_groups::collision_groups::ASTEROID_VERT;
-use crate::physics_world::collision_groups::collision_groups::BULLET;
-use crate::physics_world::collision_groups::collision_groups::SHIP;
+use crate::physics_world::*;
 
 pub fn spawn_player(
     entity_id: usize,
@@ -35,6 +33,16 @@ pub fn spawn_player(
         ship_component: Some(ShipComponent {
             class: class,
             input: ShipInput::new(),
+            weapons: vec![Weapon {
+                weapon_type: weapons::WeaponType::MachineGun,
+                local_offset: Pose2::new(Vec2::ZERO, 0.0),
+                projectile_width: 0.5,
+                init_vel_mag: 1.0,
+                explosion_width: None,
+                rpm: 60.0,
+                mag_size: 20,
+                cooldown_remaining: 0.0,
+            }]
         }),
         projectile: None,
         asteroid: None
@@ -62,21 +70,44 @@ pub fn spawn_player(
 
 //------------------------------------------------------
 
-pub fn spawn_prjectile(
+pub fn fire_prjectile(
     entity_id: usize,
     spawn_pos:Pose2,
-    impusle_magnitude: Option<f32>,
-    projectile_type: ProjectileType,
-    damage: f32,
+    init_vel_mag: Option<f32>,
+    weapon: &Weapon,
     rigidbody_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
 ) -> Entity {
 
-    let mut rigid_body = RigidBodyBuilder::dynamic()
+    let rigid_body = RigidBodyBuilder::dynamic()
         .pose(spawn_pos)
+        .ccd_enabled(true)
+        .lock_rotations()
         .build();
+    let rigid_body_handle = rigidbody_set.insert(rigid_body);
 
-    if let Some(impulse) = impusle_magnitude {
+    let projectile = Some(Projectile::new(
+        weapon,
+        spawn_pos,
+        rigid_body_handle,
+        collider_set, 
+        rigidbody_set
+        ));
+
+    let entity = Entity {
+        entity_id,
+        rigid_body_handle,
+        position: spawn_pos,
+        entity_type: EntityType::Projectile,
+        ship_component: None,
+        projectile,
+        asteroid: None
+
+    };
+
+    let rigid_body = rigidbody_set.get_mut(entity.rigid_body_handle).unwrap();
+
+    if let Some(impulse) = init_vel_mag {
         let local_forward =
             Vec2::new(0.0, impulse);
         let world_impusle =
@@ -84,44 +115,8 @@ pub fn spawn_prjectile(
         rigid_body.apply_impulse(world_impusle, true);
     }
 
-    let rigid_body_handle = rigidbody_set.insert(rigid_body);
 
-    match projectile_type {
-        ProjectileType::Bullet => {
-            let collider = ColliderBuilder::ball(0.05)
-                .collision_groups(InteractionGroups::new(
-                        BULLET,
-                        BULLET|ASTEROID_VERT,
-                        InteractionTestMode::And,
-                        ));
-            collider_set.insert_with_parent(
-                collider,
-                rigid_body_handle, 
-                rigidbody_set
-            );
-        }
-
-        _ => {}
-        
-    }
-
-    let projectile = Entity {
-        entity_id,
-        rigid_body_handle,
-        position: spawn_pos,
-        entity_type: EntityType::Projectile,
-        ship_component: None,
-        projectile: Some(
-            Projectile {
-                projectile_type: projectile_type,
-                damage: damage,
-            }
-        ),
-        asteroid: None
-
-    };
-
-    projectile
+    entity
 
 }
 
