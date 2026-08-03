@@ -37,7 +37,7 @@ pub fn spawn_player(
                 weapon_type: weapons::WeaponType::MachineGun,
                 local_offset: Pose2::new(Vec2::ZERO, 0.0),
                 projectile_width: 0.5,
-                init_vel_mag: 1.0,
+                init_vel_mag: 5.0,
                 explosion_width: None,
                 rpm: 60.0,
                 mag_size: 20,
@@ -84,6 +84,7 @@ pub fn fire_prjectile(
         .ccd_enabled(true)
         .lock_rotations()
         .build();
+
     let rigid_body_handle = rigidbody_set.insert(rigid_body);
 
     let projectile = Some(Projectile::new(
@@ -109,10 +110,10 @@ pub fn fire_prjectile(
 
     if let Some(impulse) = init_vel_mag {
         let local_forward =
-            Vec2::new(0.0, impulse);
+            Vec2::new(0.0, -impulse);
         let world_impusle =
             rigid_body.rotation().transform_vector(local_forward);
-        rigid_body.apply_impulse(world_impusle, true);
+        rigid_body.set_linvel(world_impusle, true);
     }
 
 

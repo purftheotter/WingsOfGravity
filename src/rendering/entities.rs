@@ -19,7 +19,6 @@ pub fn render_ship(
     let entity_transform = 
         render_context.world_to_screen(entity.position.translation);
 
-
     if let Some(texture) = assets.get(&ship_stats.texture_id) {
 
         let world_width = ship_stats.size.x;

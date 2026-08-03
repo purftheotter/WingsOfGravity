@@ -31,7 +31,8 @@ impl PhysicsWorld {
         }
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self, dt: f32) {
+        self.integration_parameters.dt = dt;
         let physics_hooks = ();
         let event_handler = ();
 

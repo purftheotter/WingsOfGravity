@@ -43,6 +43,10 @@ impl RenderContext {
     pub fn world_to_screen_scale(&self, world_length: f32) -> f32 {
         world_length * self.pixels_per_meter
     }
+    
+    pub fn world_to_screen_rot(&self, world_rot: f32) -> f32 {
+        -world_rot
+    }
 
     pub fn clear(&mut self, color: Color) {
         self.canvas.set_draw_color(color);

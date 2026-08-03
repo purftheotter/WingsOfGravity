@@ -1,3 +1,4 @@
+use rapier2d::parry::query::ShapeCastOptions;
 use rapier2d::prelude::*;
 
 use std::time::Instant;
@@ -7,6 +8,7 @@ use sdl2::render::*;
 use sdl2::video::*;
 use sdl2::EventPump;
 
+use crate::physics_world::*;
 use crate::render_context::RenderContext;
 use crate::rendering::*;
 use crate::rendering::debug::*;
@@ -118,14 +120,16 @@ impl Game {
             last_frame = current_frame;
 
             self.handle_input();
-
             self.update_ships(dt);
-
             self.update_weapons(dt);
 
-            self.physics_world.step();
+            let hits = self.check_projectile_impacts(dt);
+            
+            self.physics_world.step(dt);
 
-            self.update_asteroid();
+            self.update_asteroids();
+            
+            self.remove_hit_projectile(hits);
 
             self.sync_position();
 
@@ -237,7 +241,7 @@ impl Game {
         }
     }
 
-    pub fn update_asteroid(&mut self) {
+    pub fn update_asteroids(&mut self) {
         for entity in self.entities.iter_mut() {
             if let Some(asteroid) = &mut entity.asteroid {
                 asteroid.update_asteroid(
@@ -263,7 +267,6 @@ impl Game {
                             &mut self.physics_world.rigid_body_set,
                             &mut self.physics_world.collider_set
                         );
-                        println!("ping");
 
                         new_projectiles.push(entity);
                         self.next_entity_id += 1;
@@ -273,6 +276,78 @@ impl Game {
             }
         }
         self.entities.append(&mut new_projectiles);
+    }
+
+    pub fn check_projectile_impacts(&self, dt:f32) -> Vec<usize> {
+        let mut hit_indices = vec![];
+
+
+        let filter = QueryFilter::default()
+            .groups(InteractionGroups::new(
+                    BULLET,
+                    ASTEROID_HULL,
+                    InteractionTestMode::And
+                    ))
+            .exclude_sensors();
+
+        let query_pipeline = 
+            self.physics_world.broad_phase.as_query_pipeline(
+                self.physics_world.narrow_phase.query_dispatcher(),
+                &self.physics_world.rigid_body_set,
+                &self.physics_world.collider_set,
+                filter,
+            );
+
+        for (i, entity) in self.entities.iter().enumerate() {
+            if let Some(projectile) = &entity.projectile {
+                let rigid_body = 
+                    self.physics_world.rigid_body_set
+                        .get(entity.rigid_body_handle)
+                        .unwrap();
+
+                let start_pos = *rigid_body.position();
+                let velocity = rigid_body.linvel().clone();
+
+                let collider = 
+                    self.physics_world.collider_set
+                        .get(projectile.collider_handle)
+                        .unwrap();
+                let shape = collider.shape();
+
+                let options = ShapeCastOptions {
+                    max_time_of_impact: dt,
+                    target_distance: 0.0,
+                    stop_at_penetration: true,
+                    compute_impact_geometry_on_penetration: false,
+                };
+
+                if let Some(_) = query_pipeline.cast_shape(
+                    &start_pos,
+                    velocity,
+                    shape,
+                    options,
+                ){
+                    hit_indices.push(i);
+                }
+
+            }
+        }
+
+        hit_indices
+    }
+
+    pub fn remove_hit_projectile(&mut self, hit_indices: Vec<usize>) {
+        for &i in hit_indices.iter().rev() {
+            let entity = self.entities.remove(i);
+            self.physics_world.rigid_body_set.remove(
+                entity.rigid_body_handle,
+                &mut self.physics_world.island_manager,
+                &mut self.physics_world.collider_set,
+                &mut self.physics_world.impulse_joint_set,
+                &mut self.physics_world.multibody_joint_set,
+                true,
+            );
+        }
     }
 
     pub fn sync_position(&mut self) {
