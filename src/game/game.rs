@@ -245,7 +245,8 @@ impl Game {
         for entity in self.entities.iter_mut() {
             if let Some(asteroid) = &mut entity.asteroid {
                 asteroid.update_asteroid(
-                    &self.physics_world.narrow_phase
+                    entity.rigid_body_handle,
+                    &mut self.physics_world
                 );
             }
 

@@ -1,8 +1,12 @@
 use noise::Fbm;
 use noise::NoiseFn;
 use noise::Perlin;
+use rapier2d::dynamics::RigidBodyHandle;
+use rapier2d::dynamics::RigidBodySet;
 use rapier2d::math::*;
 use rapier2d::geometry::*;
+use rapier2d::parry::transformation::vhacd::VHACDParameters;
+use rapier2d::parry::transformation::voxelization::*;
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
@@ -13,6 +17,7 @@ use crate::physics_world::*;
 pub struct Asteroid {
     pub terrain_verts: Vec<AsteroidVert>,
     pub boundary: Vec<PolarIndex>,
+    pub hull_handle: ColliderHandle,
     pub index_map: HashMap<PolarIndex, usize>,
     pub sprite_id: Option<String>,
 }
@@ -28,6 +33,8 @@ pub struct AsteroidVert {
 impl Asteroid {
     pub fn new(
         collider_set: &mut ColliderSet,
+        rigid_body_set: &mut RigidBodySet,
+        rigid_body_handle: RigidBodyHandle,
         subdivisions: usize,
         radius: f32,
         seed: u32,
@@ -53,10 +60,21 @@ impl Asteroid {
             .map(|(array_pos, vert)| (vert.index, array_pos))
             .collect();
 
+        let hull_handle = collider_set.insert_with_parent(
+            build_asteroid_collider(
+                &boundary,
+                &index_map,
+                &terrain_verts
+            ),
+            rigid_body_handle,
+            rigid_body_set
+            );
+
         Self {
             terrain_verts,
-            index_map,
             boundary,
+            hull_handle,
+            index_map,
             sprite_id: Some(sprite_id),
         }
     }
@@ -127,20 +145,39 @@ impl Asteroid {
         (verticies, boundary)
     }
 
-    pub fn build_asteroid_collider(&mut self) -> Collider {
-        self.build_boundary();
+    pub fn rebuild_asteroid_collider(
+        &mut self,
+        rigid_body_handle: RigidBodyHandle,
+        physics_world: &mut PhysicsWorld,
+    ){
+        physics_world.collider_set.remove(
+            self.hull_handle,
+            &mut physics_world.island_manager,
+            &mut physics_world.rigid_body_set,
+            true,
+            );
+
         let outline: Vec<Vec2> = self.boundary.iter()
             .map(|polar_index| {
                 let array_pos = self.index_map[polar_index];
                 self.terrain_verts[array_pos].local_transform
             })
             .collect();
-            
 
-        ColliderBuilder::convex_decomposition(
+        let new_collider = 
+            ColliderBuilder::convex_decomposition(
             &outline,
             &Asteroid::build_polyline_indices(outline.len()),
-            ).restitution(0.2).build()
+        ).restitution(0.2).build();
+
+        let new_hull_handle = physics_world.collider_set
+            .insert_with_parent(
+                new_collider,
+                rigid_body_handle,
+                &mut physics_world.rigid_body_set);
+
+        self.hull_handle = new_hull_handle;
+
     }
 
     pub fn build_polyline_indices(outline_len: usize) -> Vec<[u32; 2]> {
@@ -161,7 +198,9 @@ impl Asteroid {
                 new_boundary.push(*polar_index);
             }
         }
+        new_boundary.dedup();
         self.boundary = new_boundary;
+        println!("{:?}", self.boundary.len());
     }
 
     pub fn radius_displacement(noise:&Fbm<Perlin>, angle: f32, wobble_strength: f32) -> f32 {
@@ -233,18 +272,22 @@ impl Asteroid {
 
     pub fn update_asteroid(
         &mut self,
-        narrow_phase: &NarrowPhase,
+        rigid_body_handle: RigidBodyHandle,
+        physics_world: &mut PhysicsWorld,
     ){
         let mut verts_changed: bool = false;
         for vert in self.terrain_verts.iter_mut() {
-            if vert.update_vert(narrow_phase) {
+            if vert.update_vert(&physics_world.narrow_phase) {
                 verts_changed = true;
             }
         }
         
         if verts_changed{
             self.build_boundary();
-            println!("oh dear");
+            self.rebuild_asteroid_collider(
+                rigid_body_handle,
+                physics_world
+            );
         }
     }
 
@@ -283,4 +326,22 @@ impl AsteroidVert {
         }
     }
     
+}
+
+
+pub fn build_asteroid_collider(
+    boundary: &Vec<PolarIndex>,
+    index_map: &HashMap<PolarIndex, usize>,
+    terrain_verts: &Vec<AsteroidVert>,
+) -> Collider {
+    let outline: Vec<Vec2> = boundary.iter()
+        .map(|polar_index| {
+            let array_pos = index_map[polar_index];
+            terrain_verts[array_pos].local_transform
+        })
+        .collect();
+    ColliderBuilder::convex_decomposition(
+        &outline,
+        &Asteroid::build_polyline_indices(outline.len()),
+        ).restitution(0.2).build()
 }

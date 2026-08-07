@@ -139,30 +139,26 @@ pub fn spawn_asteroid(
 
     let rigid_body_handle = rigid_body_set.insert(rigid_body);
 
-    let mut entity = Entity {
+    let asteroid = Asteroid::new(
+        collider_set,
+        rigid_body_set,
+        rigid_body_handle,
+        subdivisions,
+        radius,
+        entity_id as u32,
+        noise_strength,
+        "asteroid".to_string()
+    );
+
+    let entity = Entity {
         entity_id,
         rigid_body_handle,
         position: spawn_pos,
         entity_type: EntityType::Asteroid,
         ship_component: None,
         projectile: None,
-        asteroid: Some(Asteroid::new(
-                collider_set,
-                subdivisions,
-                radius,
-                entity_id as u32,
-                noise_strength,
-                "asteroid".to_string()
-        ))
+        asteroid: Some(asteroid)
     };
-
-    let asteroid = entity.asteroid.as_mut().unwrap();
-
-    collider_set.insert_with_parent(
-        asteroid.build_asteroid_collider(),
-        rigid_body_handle,
-        rigid_body_set
-    );
 
     entity
     
