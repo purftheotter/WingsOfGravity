@@ -1,5 +1,7 @@
 use rapier2d::prelude::*;
 
+use sdl2::pixels::Color;
+
 use crate::render_context::RenderContext;
 use crate::rendering::debug::*;
 
@@ -11,6 +13,9 @@ pub fn render_hitbox(
     physics_world:&PhysicsWorld,
     render_context: &mut RenderContext,
 ) ->Result<(), String> {
+
+    render_context.canvas
+        .set_draw_color(Color::RGB(0, 255, 0));
 
     let entity_rigid_body = 
         physics_world.rigid_body_set
@@ -71,7 +76,19 @@ pub fn render_hitbox(
         }
 
         if let Some(asteroid) = entity.asteroid.as_ref() {
+            render_context.canvas
+                .set_draw_color(Color::RGB(0, 255, 0));
+
             for vert in asteroid.terrain_verts.iter() {
+
+                if vert.destroyed {
+                    render_context.canvas
+                        .set_draw_color(Color::RGB(255, 0, 0));
+                }else {
+                    render_context.canvas
+                        .set_draw_color(Color::RGB(0, 255, 0));
+                }
+
                 if let Some(sensor) = 
                     physics_world.collider_set
                         .get(vert.sensor_handle)

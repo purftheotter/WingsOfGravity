@@ -244,10 +244,13 @@ impl Game {
     pub fn update_asteroids(&mut self) {
         for entity in self.entities.iter_mut() {
             if let Some(asteroid) = &mut entity.asteroid {
-                asteroid.update_asteroid(
+                if !asteroid.update_asteroid(
                     entity.rigid_body_handle,
                     &mut self.physics_world
-                );
+                ){
+                    println!("delete asteroid entity");
+                }
+                
             }
 
         }
@@ -389,9 +392,6 @@ impl Game {
         if !self.debug_mode {
             return Ok(())
         }
-
-        self.render_context.canvas
-            .set_draw_color(Color::RGB(100, 0, 100));
 
         for entity in self.entities.iter(){
             render_hitbox(

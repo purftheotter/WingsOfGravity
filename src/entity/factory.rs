@@ -142,7 +142,7 @@ pub fn spawn_asteroid(
     let asteroid = Asteroid::new(
         collider_set,
         rigid_body_set,
-        rigid_body_handle,
+        &rigid_body_handle,
         subdivisions,
         radius,
         entity_id as u32,
