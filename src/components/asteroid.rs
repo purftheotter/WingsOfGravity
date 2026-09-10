@@ -9,7 +9,7 @@ use rapier2d::geometry::*;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
-use crate::math::math::PolarIndex;
+use crate::core::*;
 use crate::physics_world::*;
 
 pub struct Asteroid {

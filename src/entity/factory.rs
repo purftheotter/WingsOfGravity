@@ -89,7 +89,6 @@ pub fn fire_prjectile(
 
     let projectile = Some(Projectile::new(
         weapon,
-        spawn_pos,
         rigid_body_handle,
         collider_set, 
         rigidbody_set

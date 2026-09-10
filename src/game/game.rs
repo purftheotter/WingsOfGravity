@@ -1,4 +1,3 @@
-use rapier2d::parry::query::ShapeCastOptions;
 use rapier2d::prelude::*;
 
 use std::time::Instant;
@@ -8,7 +7,6 @@ use sdl2::render::*;
 use sdl2::video::*;
 use sdl2::EventPump;
 
-use crate::physics_world::*;
 use crate::render_context::RenderContext;
 use crate::rendering::*;
 use crate::rendering::debug::*;
@@ -97,52 +95,6 @@ impl Game {
         })
     }
 
-    pub fn run(&mut self) -> Result<(), String> {
-        //texture creator
-        let texture_creator = self.render_context.canvas.texture_creator();
-
-        //making assets
-        let mut assets = Assets::new();
-
-        self.load_textures(&mut assets, &texture_creator)?;
-
-        self.load_world()?;
-
-        //setup for making the loop run at a consistent rate
-        let mut last_frame = Instant::now();
-
-        while self.running {
-            
-            let current_frame = Instant::now();
-
-            let dt = current_frame.duration_since(last_frame).as_secs_f32();
-
-            last_frame = current_frame;
-
-            self.handle_input();
-            self.update_ships(dt);
-            self.update_weapons(dt);
-
-            let hits = self.check_projectile_impacts(dt);
-            
-            self.physics_world.step(dt);
-
-            self.update_asteroids();
-            
-            self.remove_hit_projectile(hits);
-
-            self.sync_position();
-
-            self.render(&assets).expect("Render Failed");
-
-            self.debug_render()?;
-
-            self.render_context.present();
-        }
-
-        Ok(())
-    }
-
     pub fn load_textures(
         &mut self,
         assets: &mut Assets,
@@ -205,6 +157,52 @@ impl Game {
                 0.0,
             )
         );
+
+        Ok(())
+    }
+
+    pub fn run(&mut self) -> Result<(), String> {
+        //texture creator
+        let texture_creator = self.render_context.canvas.texture_creator();
+
+        //making assets
+        let mut assets = Assets::new();
+
+        self.load_textures(&mut assets, &texture_creator)?;
+
+        self.load_world()?;
+
+        //setup for making the loop run at a consistent rate
+        let mut last_frame = Instant::now();
+
+        while self.running {
+            
+            let current_frame = Instant::now();
+
+            let dt = current_frame.duration_since(last_frame).as_secs_f32();
+
+            last_frame = current_frame;
+
+            self.handle_input();
+            self.update_ships(dt);
+            self.update_weapons(dt);
+            
+            self.physics_world.step(dt);
+
+            let hits = self.check_projectile_impacts();
+            
+            self.update_asteroids();
+            
+            self.remove_hit_projectile(hits);
+
+            self.sync_position();
+
+            self.render(&assets).expect("Render Failed");
+
+            self.debug_render()?;
+
+            self.render_context.present();
+        }
 
         Ok(())
     }
@@ -282,59 +280,38 @@ impl Game {
         self.entities.append(&mut new_projectiles);
     }
 
-    pub fn check_projectile_impacts(&self, dt:f32) -> Vec<usize> {
+    pub fn check_projectile_impacts(&mut self) -> Vec<usize> {
         let mut hit_indices = vec![];
+        let mut newly_exploded = vec![];
 
+        for (i, entity) in self.entities.iter_mut().enumerate() {
+            if let Some(projectile) = &mut entity.projectile {
 
-        let filter = QueryFilter::default()
-            .groups(InteractionGroups::new(
-                    BULLET,
-                    ASTEROID_HULL,
-                    InteractionTestMode::And
-                    ))
-            .exclude_sensors();
-
-        let query_pipeline = 
-            self.physics_world.broad_phase.as_query_pipeline(
-                self.physics_world.narrow_phase.query_dispatcher(),
-                &self.physics_world.rigid_body_set,
-                &self.physics_world.collider_set,
-                filter,
-            );
-
-        for (i, entity) in self.entities.iter().enumerate() {
-            if let Some(projectile) = &entity.projectile {
-                let rigid_body = 
-                    self.physics_world.rigid_body_set
-                        .get(entity.rigid_body_handle)
-                        .unwrap();
-
-                let start_pos = *rigid_body.position();
-                let velocity = rigid_body.linvel().clone();
-
-                let collider = 
-                    self.physics_world.collider_set
-                        .get(projectile.collider_handle)
-                        .unwrap();
-                let shape = collider.shape();
-
-                let options = ShapeCastOptions {
-                    max_time_of_impact: dt,
-                    target_distance: 0.0,
-                    stop_at_penetration: true,
-                    compute_impact_geometry_on_penetration: false,
-                };
-
-                if let Some(_) = query_pipeline.cast_shape(
-                    &start_pos,
-                    velocity,
-                    shape,
-                    options,
-                ){
+                if projectile.exploded {
                     hit_indices.push(i);
+                    continue;
                 }
 
+                let has_hit = self.physics_world.narrow_phase
+                    .intersection_pairs_with(projectile.collider_handle)
+                    .any(|(_, _, intersecting)| intersecting);
+
+                if has_hit {
+                    projectile.exploded = true;
+                    if let Some(explosion_handle) = 
+                        projectile.explosion_handle {
+                            newly_exploded.push(
+                                explosion_handle
+                            );
+                        }
+                }
             }
+        }
+
+        for collider in newly_exploded {
+            let collider = 
+                self.physics_world.collider_set.get_mut(collider).unwrap();
+            collider.set_enabled(true);
         }
 
         hit_indices
@@ -368,7 +345,7 @@ impl Game {
         &mut self,
         assets: &Assets,
         ) -> Result<(), String> {
-        self.render_context.clear(Color::RGB(64, 192, 255));
+        self.render_context.clear(Color::RGB(0, 0, 20));
 
         for entity in self.entities.iter() {
             match entity.entity_type {
