@@ -17,8 +17,7 @@ pub fn spawn_player(
     ship_database: &ShipDatabase,
     rigidbody_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
-    ) -> Entity {
-
+) -> Entity {
     let rigid_body = RigidBodyBuilder::dynamic()
         .translation(spawn_pos.translation)
         .build();
@@ -67,8 +66,6 @@ pub fn spawn_player(
     player_entity
 
 }
-
-//------------------------------------------------------
 
 pub fn fire_prjectile(
     entity_id: usize,
@@ -119,8 +116,6 @@ pub fn fire_prjectile(
     entity
 
 }
-
-//------------------------------------------------------
 
 pub fn spawn_asteroid(
     entity_id: usize,

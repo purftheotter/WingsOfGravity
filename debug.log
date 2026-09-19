@@ -1,0 +1,114 @@
+   Compiling Wings_Of_Gravity v0.1.0 (/home/purf/Projects/wings_of_gravity)
+warning: unused import: `rapier2d::parry::transformation::utils::transformed`
+ --> src/rendering/debug/shapes.rs:3:5
+  |
+3 | use rapier2d::parry::transformation::utils::transformed;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `crate::render_context`
+ --> src/rendering/debug/shapes.rs:4:5
+  |
+4 | use crate::render_context;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `directory::asset_path`
+ --> src/system_utils/mod.rs:3:5
+  |
+3 | use directory::asset_path;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `Sprite` is never constructed
+ --> src/components/sprite.rs:2:12
+  |
+2 | pub struct Sprite {
+  |            ^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `projectile_type` is never read
+  --> src/components/projectile.rs:16:9
+   |
+15 | pub struct Projectile {
+   |            ---------- field in this struct
+16 |     pub projectile_type: ProjectileType,
+   |         ^^^^^^^^^^^^^^^
+
+warning: field `sprite_id` is never read
+  --> src/components/asteroid.rs:20:9
+   |
+15 | pub struct Asteroid {
+   |            -------- field in this struct
+...
+20 |     pub sprite_id: Option<String>,
+   |         ^^^^^^^^^
+
+warning: field `mag_size` is never read
+  --> src/components/weapons.rs:10:9
+   |
+ 3 | pub struct Weapon {
+   |            ------ field in this struct
+...
+10 |     pub mag_size: i8,
+   |         ^^^^^^^^
+
+warning: variants `LaserBeam` and `MissleLauncher` are never constructed
+  --> src/components/weapons.rs:17:5
+   |
+15 | pub enum WeaponType {
+   |          ---------- variants in this enum
+16 |     MachineGun,
+17 |     LaserBeam,
+   |     ^^^^^^^^^
+18 |     MissleLauncher,
+   |     ^^^^^^^^^^^^^^
+
+warning: field `entity_id` is never read
+  --> src/entity/entity.rs:16:9
+   |
+15 | pub struct Entity {
+   |            ------ field in this struct
+16 |     pub entity_id: usize,
+   |         ^^^^^^^^^
+
+warning: method `world_to_screen_rot` is never used
+  --> src/render_context/render_context.rs:47:12
+   |
+16 | impl RenderContext {
+   | ------------------ method in this implementation
+...
+47 |     pub fn world_to_screen_rot(&self, world_rot: f32) -> f32 {
+   |            ^^^^^^^^^^^^^^^^^^^
+
+warning: methods `get_mut` and `insert_texture` are never used
+  --> src/rendering/assets.rs:39:12
+   |
+11 | impl Assets {
+   | ----------- methods in this implementation
+...
+39 |     pub fn get_mut(&mut self, id: &str) -> Option<&mut Texture<'static>> {
+   |            ^^^^^^^
+...
+43 |     pub fn insert_texture(&mut self, id: &str, texture: Texture<'static...
+   |            ^^^^^^^^^^^^^^
+
+warning: function `render_ws_line` is never used
+ --> src/rendering/debug/shapes.rs:8:8
+  |
+8 | pub fn render_ws_line(
+  |        ^^^^^^^^^^^^^^
+
+warning: function `render_filled_polygon` is never used
+  --> src/rendering/debug/shapes.rs:94:8
+   |
+94 | pub fn render_filled_polygon(
+   |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `Wings_Of_Gravity` (bin "Wings_Of_Gravity") generated 13 warnings (run `cargo fix --bin "Wings_Of_Gravity" -p Wings_Of_Gravity` to apply 3 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.75s
+     Running `target/debug/Wings_Of_Gravity`
+delete asteroid entity
+PolarIndex { ring: 2, point: 0 }, PolarIndex { ring: 2, point: 1 }, PolarIndex { ring: 2, point: 2 }, PolarIndex { ring: 2, point: 3 }, PolarIndex { ring: 2, point: 4 }, PolarIndex { ring: 2, point: 5 }, PolarIndex { ring: 2, point: 6 }, PolarIndex { ring: 2, point: 7 }, PolarIndex { ring: 2, point: 8 }, PolarIndex { ring: 2, point: 9 }, PolarIndex { ring: 2, point: 10 }, PolarIndex { ring: 2, point: 11 }, delete asteroid entity
+PolarIndex { ring: 2, point: 0 }, PolarIndex { ring: 2, point: 1 }, PolarIndex { ring: 2, point: 2 }, PolarIndex { ring: 2, point: 3 }, PolarIndex { ring: 2, point: 4 }, PolarIndex { ring: 2, point: 5 }, PolarIndex { ring: 2, point: 6 }, PolarIndex { ring: 2, point: 7 }, PolarIndex { ring: 1, point: 4 }, PolarIndex { ring: 2, point: 9 }, PolarIndex { ring: 2, point: 10 }, PolarIndex { ring: 2, point: 11 }, delete asteroid entity
+PolarIndex { ring: 2, point: 0 }, PolarIndex { ring: 2, point: 1 }, PolarIndex { ring: 2, point: 2 }, PolarIndex { ring: 2, point: 3 }, PolarIndex { ring: 2, point: 4 }, PolarIndex { ring: 2, point: 5 }, PolarIndex { ring: 2, point: 6 }, PolarIndex { ring: 2, point: 7 }, PolarIndex { ring: 1, point: 4 }, PolarIndex { ring: 2, point: 9 }, PolarIndex { ring: 2, point: 10 }, PolarIndex { ring: 2, point: 11 }, 

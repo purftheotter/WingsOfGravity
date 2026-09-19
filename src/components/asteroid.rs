@@ -27,7 +27,6 @@ pub struct AsteroidVert {
     pub destroyed: bool,
 }
 
-
 impl Asteroid {
     pub fn new(
         collider_set: &mut ColliderSet,
@@ -275,7 +274,6 @@ impl Asteroid {
 
         false
     }
-
 }
 
 impl AsteroidVert {
@@ -315,7 +313,6 @@ impl AsteroidVert {
             false
         }
     }
-    
 }
 
 

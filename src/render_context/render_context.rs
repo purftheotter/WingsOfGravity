@@ -7,6 +7,7 @@ use sdl2::pixels::Color;
 
 pub struct RenderContext {
     pub canvas: Canvas<Window>,
+    pub ttf_context: sdl2::ttf::Sdl2TtfContext,
     pub screen_width: u32,
     pub screen_height: u32,
     pub pixels_per_meter: f32,
@@ -16,12 +17,14 @@ pub struct RenderContext {
 impl RenderContext {
     pub fn new(
         canvas: Canvas<Window>,
+        ttf_context: sdl2::ttf::Sdl2TtfContext,
         screen_width:u32,
         screen_height:u32,
         pixels_per_meter:f32,
         ) -> Self {
         Self { 
             canvas, 
+            ttf_context,
             screen_width, 
             screen_height, 
             pixels_per_meter,

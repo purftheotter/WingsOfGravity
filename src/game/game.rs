@@ -60,9 +60,13 @@ impl Game {
             .build()
             .unwrap();
 
+        //create ttf_context
+        let ttf_context = sdl2::ttf::init().unwrap();
+
         let render_context = 
             RenderContext::new(
                 canvas,
+                ttf_context,
                 screen_width,
                 screen_height,
                 16.0,
@@ -247,6 +251,9 @@ impl Game {
                     &mut self.physics_world
                 ){
                     println!("delete asteroid entity");
+                }
+                for point in asteroid.boundary.iter() {
+                    print!("{:?}, ", point);
                 }
                 
             }
