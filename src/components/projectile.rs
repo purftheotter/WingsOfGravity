@@ -16,13 +16,13 @@ pub struct Projectile {
     pub projectile_type: ProjectileType,
     pub collider_handle: ColliderHandle,
     pub explosion_handle: Option<ColliderHandle>,
+    pub exploded: bool,
 }
 
 impl Projectile {
 
     pub fn new(
         weapon: &Weapon,
-        spawn_pos:Pose2,
         rigid_body_handle: RigidBodyHandle,
         collider_set: &mut ColliderSet,
         rigid_body_set: &mut RigidBodySet,
@@ -48,7 +48,7 @@ impl Projectile {
                                 ASTEROID_HULL,
                                 InteractionTestMode::And,
                             )
-                        ).position(spawn_pos),
+                        ),
                     rigid_body_handle,
                     rigid_body_set,
 
@@ -60,6 +60,7 @@ impl Projectile {
                     ColliderBuilder::ball(crater_radius)
                         .sensor(true)
                         .mass(0.0)
+                        .enabled(false)
                         .collision_groups(InteractionGroups::new(
                             BULLET,
                             ASTEROID_VERT,
@@ -79,7 +80,7 @@ impl Projectile {
                                 ASTEROID_HULL,
                                 InteractionTestMode::And,
                             )
-                        ).position(spawn_pos),
+                        ),
                     rigid_body_handle,
                     rigid_body_set,
                 );
@@ -87,13 +88,14 @@ impl Projectile {
                     ColliderBuilder::ball(weapon.explosion_width.unwrap() / 2.0)
                         .sensor(true)
                         .mass(0.0)
+                        .enabled(false)
                         .collision_groups(
                             InteractionGroups::new(
                                 BULLET,
                                 ASTEROID_VERT,
                                 InteractionTestMode::And,
                             )
-                    ).position(spawn_pos),
+                    ),
                     rigid_body_handle,
                     rigid_body_set,
                 ));
@@ -102,13 +104,14 @@ impl Projectile {
             ProjectileType::Laser => {
                 collider_handle = collider_set.insert_with_parent(
                     ColliderBuilder::ball(weapon.projectile_width / 2.0)
+                    .sensor(true)
                     .collision_groups(
                         InteractionGroups::new(
                             BULLET,
                             ASTEROID_HULL,
                             InteractionTestMode::And,
                         )
-                    ).position(spawn_pos),
+                    ),
                     rigid_body_handle,
                     rigid_body_set,
                 );
@@ -117,13 +120,14 @@ impl Projectile {
                         ColliderBuilder::ball(weapon.projectile_width / 2.0)
                         .sensor(true)
                         .mass(0.0)
+                        .enabled(false)
                         .collision_groups(
                             InteractionGroups::new(
                                 BULLET,
                                 BULLET|ASTEROID_VERT,
                                 InteractionTestMode::And,
                             )
-                        ).position(spawn_pos),
+                        ),
                         rigid_body_handle,
                         rigid_body_set,
                     )
@@ -134,7 +138,8 @@ impl Projectile {
         Self { 
             projectile_type,
             collider_handle,
-            explosion_handle
+            explosion_handle,
+            exploded: false,
         }
     }
 

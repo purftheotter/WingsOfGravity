@@ -1,6 +1,0 @@
-thread 'main' (205850) panicked at /home/purf/.cargo/registry/src/
-index.crates.io-1949cf8c6b5b557f/parry2d-0.29.0/src/transformation/voxelization/voxel_set.rs:691:9:
-Cannot compute exact convex hull without voxel-to-primitives-map. 
-Consider passing voxel_to_primitives_map = true to the voxelizer.
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
