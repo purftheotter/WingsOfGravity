@@ -154,11 +154,11 @@ impl Game {
                 &mut self.physics_world.rigid_body_set,
                 &mut self.physics_world.collider_set,
                 Pose2::new(
-                    Vec2::new(10.0, 10.0),
+                    Vec2::new(10.0, 5.0),
                     0.0),
                 3,
                 10.0,
-                0.0,
+                0.5,
             )
         );
 

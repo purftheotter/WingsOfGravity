@@ -1,4 +1,6 @@
+use noise::RotatePoint;
 use rapier2d::prelude::*;
+use crate::core::*;
 
 use sdl2::pixels::Color;
 
@@ -76,6 +78,7 @@ pub fn render_hitbox(
         }
 
         if let Some(asteroid) = entity.asteroid.as_ref() {
+
             render_context.canvas
                 .set_draw_color(Color::RGB(0, 255, 0));
 
@@ -95,9 +98,17 @@ pub fn render_hitbox(
                         .unwrap()
                         .shape()
                         .as_ball(){
+
+                    let sensor_pos = 
+                        rotate_pos_around(
+                            entity_rigid_body.position().append_translation(vert.local_transform),
+                            entity_rigid_body.translation(),
+                            *entity_rigid_body.rotation());
+                    
+
                     render_ball(
                         render_context,
-                        &entity_rigid_body.position().append_translation(vert.local_transform),
+                        &sensor_pos,
                         sensor
                     )?
 
