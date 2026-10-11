@@ -2,7 +2,7 @@ use sdl2::image::LoadTexture;
 use sdl2::render::{Texture, TextureCreator};
 use sdl2::video::WindowContext;
 use std::collections::HashMap;
-use crate::system_utils::directory::asset_path;
+use crate::system_utils::*;
 
 pub struct Assets {
     pub textures: HashMap<String, Texture<'static>>,

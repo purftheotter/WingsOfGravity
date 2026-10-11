@@ -201,6 +201,8 @@ impl Game {
 
             self.sync_position();
 
+            self.update_camra_pos();
+
             self.render(&assets).expect("Render Failed");
 
             self.debug_render()?;
@@ -345,6 +347,15 @@ impl Game {
                 .get(entity.rigid_body_handle)
                 .unwrap();
             entity.position = *rigid_body.position();
+        }
+    }
+
+    pub fn update_camra_pos(
+        &mut self,
+    ) {
+        if let Some(player_index) = self.player_index {
+            let player_entity = &self.entities[player_index];
+            self.render_context.camera_position = player_entity.position;
         }
     }
 

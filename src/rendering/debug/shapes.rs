@@ -1,7 +1,5 @@
 use rapier2d::geometry::*;
 use rapier2d::math::*;
-use rapier2d::parry::transformation::utils::transformed;
-use crate::render_context;
 use crate::render_context::RenderContext;
 use sdl2::rect::FPoint;
 

@@ -40,7 +40,7 @@ pub fn render_ship(
                 screen_width,
                 screen_height,
                 ),
-            entity.position.rotation.angle().to_degrees() as f64,
+                render_context.world_to_screen_rot(entity.position.rotation.angle()) as f64,
             FPoint::new(
                 screen_width / 2.0,
                 screen_height / 2.0,

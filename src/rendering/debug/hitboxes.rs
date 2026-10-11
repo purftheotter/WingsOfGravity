@@ -1,4 +1,3 @@
-use noise::RotatePoint;
 use rapier2d::prelude::*;
 use crate::core::*;
 

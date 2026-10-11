@@ -128,6 +128,7 @@ pub fn spawn_asteroid(
 ) -> Entity {
 
     let rigid_body = RigidBodyBuilder::dynamic()
+        .can_sleep(false)
         .pose(spawn_pos)
         .build();
 
