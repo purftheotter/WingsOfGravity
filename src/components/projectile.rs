@@ -1,5 +1,7 @@
 use rapier2d::prelude::*;
 
+use crate::components::sprite::Sprite;
+use crate::rendering::Assets;
 use crate::physics_world::*;
 
 use crate::components::weapons::*;
@@ -14,6 +16,7 @@ pub enum ProjectileType {
 
 pub struct Projectile {
     pub projectile_type: ProjectileType,
+    pub sprite: Sprite,
     pub collider_handle: ColliderHandle,
     pub explosion_handle: Option<ColliderHandle>,
     pub exploded: bool,
@@ -26,6 +29,7 @@ impl Projectile {
         rigid_body_handle: RigidBodyHandle,
         collider_set: &mut ColliderSet,
         rigid_body_set: &mut RigidBodySet,
+        assets: &Assets,
         ) -> Self {
 
         let projectile_type = match weapon.weapon_type {
@@ -37,8 +41,20 @@ impl Projectile {
         let collider_handle;
         let explosion_handle;
 
+        let sprite = match projectile_type {
+            ProjectileType::Bullet => {
+                Sprite::new(assets, "green_bullet".to_string())
+            },
+            ProjectileType::Missle => {
+                Sprite::new(assets, "green_bullet".to_string())
+            },
+            ProjectileType::Laser => {
+                Sprite::new(assets, "green_bullet".to_string())
+            },
+        };
+
         match projectile_type {
-            ProjectileType::Bullet => { 
+            ProjectileType::Bullet => {
                 collider_handle = collider_set.insert_with_parent(
                    ColliderBuilder::ball(weapon.projectile_width / 2.0)
                         .sensor(true)
@@ -99,7 +115,6 @@ impl Projectile {
                     rigid_body_handle,
                     rigid_body_set,
                 ));
-
             }
             ProjectileType::Laser => {
                 collider_handle = collider_set.insert_with_parent(
@@ -140,6 +155,7 @@ impl Projectile {
             collider_handle,
             explosion_handle,
             exploded: false,
+            sprite,
         }
     }
 

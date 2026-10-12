@@ -4,11 +4,13 @@ use rapier2d::prelude::*;
 use crate::assets::ShipDatabase;
 use crate::components::projectile::Projectile;
 use crate::components::ship::ShipInput;
+use crate::components::sprite::Sprite;
 use crate::components::weapons::Weapon;
 use crate::components::*;
 use crate::entity::*;
 use crate::components::asteroid::*;
 use crate::physics_world::*;
+use crate::rendering::Assets;
 
 pub fn spawn_player(
     entity_id: usize,
@@ -17,12 +19,16 @@ pub fn spawn_player(
     ship_database: &ShipDatabase,
     rigidbody_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
+    assets: &Assets,
 ) -> Entity {
+
     let rigid_body = RigidBodyBuilder::dynamic()
         .translation(spawn_pos.translation)
         .build();
 
     let rigid_body_handle = rigidbody_set.insert(rigid_body);
+
+    let sprite = Sprite::new(assets, "fighter".to_string());
 
     let player_entity = Entity {
         entity_id,
@@ -31,12 +37,13 @@ pub fn spawn_player(
         entity_type: EntityType::Ship,
         ship_component: Some(ShipComponent {
             class: class,
+            sprite,
             input: ShipInput::new(),
             weapons: vec![Weapon {
                 weapon_type: weapons::WeaponType::MachineGun,
                 local_offset: Pose2::new(Vec2::ZERO, 0.0),
                 projectile_width: 0.5,
-                init_vel_mag: 5.0,
+                init_vel_mag: 10.0,
                 explosion_width: None,
                 rpm: 60.0,
                 mag_size: 20,
@@ -69,15 +76,17 @@ pub fn spawn_player(
 
 pub fn fire_prjectile(
     entity_id: usize,
-    spawn_pos:Pose2,
-    init_vel_mag: Option<f32>,
+    spawn_pos: Pose2,
+    velocity: Vec2,
     weapon: &Weapon,
     rigidbody_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
+    assets: &Assets,
 ) -> Entity {
 
     let rigid_body = RigidBodyBuilder::dynamic()
         .pose(spawn_pos)
+        .linvel(velocity)
         .ccd_enabled(true)
         .lock_rotations()
         .build();
@@ -88,8 +97,9 @@ pub fn fire_prjectile(
         weapon,
         rigid_body_handle,
         collider_set, 
-        rigidbody_set
-        ));
+        rigidbody_set,
+        assets,
+    ));
 
     let entity = Entity {
         entity_id,
@@ -102,17 +112,6 @@ pub fn fire_prjectile(
 
     };
 
-    let rigid_body = rigidbody_set.get_mut(entity.rigid_body_handle).unwrap();
-
-    if let Some(impulse) = init_vel_mag {
-        let local_forward =
-            Vec2::new(0.0, -impulse);
-        let world_impusle =
-            rigid_body.rotation().transform_vector(local_forward);
-        rigid_body.set_linvel(world_impusle, true);
-    }
-
-
     entity
 
 }
@@ -121,6 +120,7 @@ pub fn spawn_asteroid(
     entity_id: usize,
     rigid_body_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
+    assets: &Assets,
     spawn_pos: Pose2,
     subdivisions: usize,
     radius: f32,
@@ -142,7 +142,7 @@ pub fn spawn_asteroid(
         radius,
         entity_id as u32,
         noise_strength,
-        "asteroid".to_string()
+        Sprite::new(assets, "asteroid".to_string())
     );
 
     let entity = Entity {

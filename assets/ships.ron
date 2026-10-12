@@ -6,8 +6,6 @@
     linear_drag:0.8,
     angular_drag:1.0,
 
-    texture_id:"fighter",
-
     size:(2.0, 2.0),
 
     hitbox: Triangle((
@@ -23,7 +21,6 @@
 
     linear_drag:0.8,
     angular_drag:1.5,
-    texture_id:"fighter",
 
     size:(2.0, 2.0),
     
@@ -40,8 +37,6 @@
     linear_drag:0.2,
     angular_drag:2.0,
 
-    texture_id:"fighter",
-    
     size:(2.0, 2.0),
 
     hitbox: Triangle((

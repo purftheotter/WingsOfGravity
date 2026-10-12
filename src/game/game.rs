@@ -2,9 +2,6 @@ use rapier2d::prelude::*;
 
 use std::time::Instant;
 
-use sdl2::pixels::Color;
-use sdl2::render::*;
-use sdl2::video::*;
 use sdl2::EventPump;
 
 use crate::render_context::RenderContext;
@@ -21,7 +18,7 @@ use crate::entity::*;
 
 use crate::systems::ship_movement::*;
 
-use crate::components::ShipClass;
+use crate::components::*;
 
 pub struct Game {
     pub render_context: RenderContext,
@@ -60,12 +57,15 @@ impl Game {
             .build()
             .unwrap();
 
+        let assets = Assets::new();
+
         //create ttf_context
         let ttf_context = sdl2::ttf::init().unwrap();
 
         let render_context = 
             RenderContext::new(
                 canvas,
+                assets,
                 ttf_context,
                 screen_width,
                 screen_height,
@@ -101,23 +101,31 @@ impl Game {
 
     pub fn load_textures(
         &mut self,
-        assets: &mut Assets,
-        texture_creator: &TextureCreator<WindowContext>,
     ) -> Result<(), String> {
-        assets.load_texture(
-            texture_creator,
+
+        //texture creator
+        let texture_creator = self.render_context.canvas.texture_creator();
+
+        self.render_context.assets.load_texture(
+            &texture_creator,
+            "background",
+            "assets/textures/background.png"
+            )?;
+
+        self.render_context.assets.load_texture(
+            &texture_creator,
             "fighter",
             "assets/textures/fighter.png"
         )?;
 
-        assets.load_texture(
-            texture_creator,
+        self.render_context.assets.load_texture(
+            &texture_creator,
             "asteroid",
             "assets/textures/asteroid.png"
         )?;
 
-        assets.load_texture(
-            texture_creator,
+        self.render_context.assets.load_texture(
+            &texture_creator,
             "green_bullet",
             "assets/textures/green_bullet.png"
         )?;
@@ -141,6 +149,7 @@ impl Game {
                 &self.ship_database,
                 &mut self.physics_world.rigid_body_set,
                 &mut self.physics_world.collider_set,
+                &self.render_context.assets
             )
         );
         self.player_index = Some(self.next_entity_id);
@@ -153,12 +162,13 @@ impl Game {
                 self.next_entity_id,
                 &mut self.physics_world.rigid_body_set,
                 &mut self.physics_world.collider_set,
+                &self.render_context.assets,
                 Pose2::new(
                     Vec2::new(10.0, 5.0),
                     0.0),
                 3,
                 10.0,
-                0.5,
+                0.4,
             )
         );
 
@@ -166,13 +176,8 @@ impl Game {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-        //texture creator
-        let texture_creator = self.render_context.canvas.texture_creator();
 
-        //making assets
-        let mut assets = Assets::new();
-
-        self.load_textures(&mut assets, &texture_creator)?;
+        self.load_textures()?;
 
         self.load_world()?;
 
@@ -203,7 +208,7 @@ impl Game {
 
             self.update_camra_pos();
 
-            self.render(&assets).expect("Render Failed");
+            self.render().expect("Render Failed");
 
             self.debug_render()?;
 
@@ -264,24 +269,41 @@ impl Game {
     }
 
     pub fn update_weapons(&mut self, dt: f32) {
+
         let mut new_projectiles:Vec<Entity> = vec![];
+
         for entity in self.entities.iter_mut() {
             if let Some(ship) = &mut entity.ship_component {
                 if ship.input.primary_fire {
                     let weapon = &mut ship.weapons[0];
+                    
                     if weapon.fire(dt) {
-                        let entity = fire_prjectile(
-                            self.next_entity_id,
-                            entity.position * weapon.local_offset,
-                            Some(weapon.init_vel_mag),
-                            weapon,
-                            &mut self.physics_world.rigid_body_set,
-                            &mut self.physics_world.collider_set
+                        let spawn_pos = 
+                            entity.position * weapon.local_offset;
+
+                        let ship_linvel = 
+                            self.physics_world.rigid_body_set
+                                .get(entity.rigid_body_handle)
+                                .unwrap()
+                                .linvel()
+                                .clone();
+
+                        let muzzle_vel = spawn_pos.rotation 
+                            * Vec2::new(0.0, -weapon.init_vel_mag);
+
+                        new_projectiles.push(
+                            fire_prjectile(
+                                self.next_entity_id,
+                                spawn_pos,
+                                ship_linvel + muzzle_vel,
+                                weapon,
+                                &mut self.physics_world.rigid_body_set,
+                                &mut self.physics_world.collider_set,
+                                &self.render_context.assets,
+                            )
                         );
 
-                        new_projectiles.push(entity);
                         self.next_entity_id += 1;
-
                     }
                 }
             }
@@ -355,15 +377,16 @@ impl Game {
     ) {
         if let Some(player_index) = self.player_index {
             let player_entity = &self.entities[player_index];
-            self.render_context.camera_position = player_entity.position;
+            self.render_context.camera_position =
+                player_entity.position;
+            self.render_context.camera_position.rotation = Rot2::new(0.0);
         }
     }
 
     pub fn render(
         &mut self,
-        assets: &Assets,
         ) -> Result<(), String> {
-        self.render_context.clear(Color::RGB(0, 0, 20));
+        self.render_context.render_bg("background", 1.0, 5.0)?;
 
         for entity in self.entities.iter() {
             match entity.entity_type {
@@ -371,12 +394,13 @@ impl Game {
                     render_ship(
                         entity,
                         &mut self.render_context,
-                        assets,
                         &self.ship_database
-                        )?
+                    )?
+                }
+                EntityType::Projectile => {
+                    render_projectile(entity, &mut self.render_context)?
                 }
                 EntityType::Asteroid => {}
-                EntityType::Projectile => {}
             }
         }
 

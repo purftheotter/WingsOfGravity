@@ -1,6 +1,6 @@
 use rapier2d::{geometry::SharedShape, math::Vec2};
 
-use crate::components::weapons::Weapon;
+use crate::components::{sprite::Sprite, weapons::Weapon};
 
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, serde::Deserialize)]
@@ -12,6 +12,7 @@ pub enum ShipClass {
 
 pub struct ShipComponent {
     pub class: ShipClass,
+    pub sprite: Sprite,
     pub input: ShipInput,
     pub weapons: Vec<Weapon>,
 }
@@ -24,7 +25,6 @@ pub struct ShipStats {
  
     pub hitbox:SharedShape,
 
-    pub texture_id: String,
     pub size: Vec2,
 }
 

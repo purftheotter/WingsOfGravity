@@ -9,6 +9,7 @@ use rapier2d::geometry::*;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
+use crate::components::sprite::Sprite;
 use crate::core::*;
 use crate::physics_world::*;
 
@@ -17,7 +18,7 @@ pub struct Asteroid {
     pub boundary: Vec<PolarIndex>,
     pub hull_handle: ColliderHandle,
     pub index_map: HashMap<PolarIndex, usize>,
-    pub sprite_id: Option<String>,
+    pub sprite: Sprite,
 }
 
 pub struct AsteroidVert {
@@ -36,7 +37,7 @@ impl Asteroid {
         radius: f32,
         seed: u32,
         noise_strength: f32,
-        sprite_id: String,
+        sprite: Sprite,
         ) -> Self {
 
         let mut noise = Fbm::<Perlin>::new(seed);
@@ -74,7 +75,7 @@ impl Asteroid {
             boundary,
             hull_handle,
             index_map,
-            sprite_id: Some(sprite_id),
+            sprite,
         }
     }
 
