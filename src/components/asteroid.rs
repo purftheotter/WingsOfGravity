@@ -15,18 +15,12 @@ use crate::physics_world::*;
 
 pub struct Asteroid {
     pub terrain_verts: Vec<AsteroidVert>,
-    pub boundary: Vec<PolarIndex>,
     pub hull_handle: ColliderHandle,
     pub index_map: HashMap<PolarIndex, usize>,
+    pub rings: usize,
     pub sprite: Sprite,
 }
 
-pub struct AsteroidVert {
-    pub local_transform: Vec2,
-    pub index: PolarIndex,
-    pub sensor_handle: ColliderHandle,
-    pub destroyed: bool,
-}
 
 impl Asteroid {
     pub fn new(
@@ -46,7 +40,7 @@ impl Asteroid {
         noise.lacunarity = 2.0;
         noise.persistence = 0.5;
 
-        let (terrain_verts, boundary) = Asteroid::make_astroid_verts(
+        let terrain_verts = Asteroid::make_astroid_verts(
             collider_set,
             rigid_body_set,
             &rigid_body_handle,
@@ -60,21 +54,21 @@ impl Asteroid {
             .map(|(array_pos, vert)| (vert.index, array_pos))
             .collect();
 
-        let hull_handle = collider_set.insert_with_parent(
+            let hull_handle = collider_set.insert_with_parent(
             build_asteroid_collider(
-                &boundary,
+                subdivisions,
                 &index_map,
-                &terrain_verts
-            ),
+                &terrain_verts,
+            ).expect("asteroid had not triangles: need subdiv >= 2"),
             *rigid_body_handle,
             rigid_body_set
             );
 
         Self {
             terrain_verts,
-            boundary,
             hull_handle,
             index_map,
+            rings: subdivisions,
             sprite,
         }
     }
@@ -87,9 +81,8 @@ impl Asteroid {
         base_radius:f32,
         noise: &Fbm<Perlin>,
         noise_strength: f32,
-    ) -> (Vec<AsteroidVert>, Vec<PolarIndex>){
+    ) -> Vec<AsteroidVert>{
         let mut verticies:Vec<AsteroidVert> =  vec![];
-        let mut boundary:Vec<PolarIndex> = vec![];
 
         let subdivisions = *subdivisions;
 
@@ -142,20 +135,23 @@ impl Asteroid {
                     )
                 );
 
-                if i == subdivisions - 1 {
-                    boundary.push(polar_idx)
-                }
             }
         }
 
-        (verticies, boundary)
+        verticies
     }
 
-    pub fn rebuild_asteroid_collider(
+    pub fn build_asteroid_collider(
         &mut self,
         rigid_body_handle: RigidBodyHandle,
         physics_world: &mut PhysicsWorld,
-    ){
+    ) -> bool {
+ 
+        let Some(new_collider) = 
+            build_asteroid_collider(self.rings, &self.index_map, &self.terrain_verts) else {
+                return false;
+            };
+
         physics_world.collider_set.remove(
             self.hull_handle,
             &mut physics_world.island_manager,
@@ -163,53 +159,12 @@ impl Asteroid {
             true,
             );
 
-        let outline: Vec<Vec2> = self.boundary.iter()
-            .map(|polar_index| {
-                let array_pos = self.index_map[polar_index];
-                self.terrain_verts[array_pos].local_transform
-            })
-            .collect();
-
-        let new_collider = 
-            ColliderBuilder::convex_decomposition(
-            &outline,
-            &Asteroid::build_polyline_indices(outline.len()),
-        ).restitution(0.2).build();
-
-        let new_hull_handle = physics_world.collider_set
-            .insert_with_parent(
+        self.hull_handle = physics_world.collider_set.insert_with_parent(
                 new_collider,
                 rigid_body_handle,
                 &mut physics_world.rigid_body_set);
 
-        self.hull_handle = new_hull_handle;
-
-    }
-
-    pub fn build_polyline_indices(outline_len: usize) -> Vec<[u32; 2]> {
-        (0..outline_len)
-            .map(|i| [i as u32, ((i + 1) % outline_len) as u32])
-            .collect()
-    }
-
-    pub fn build_boundary(&mut self) -> bool {
-        let mut new_boundary:Vec<PolarIndex> = vec![];
-
-        for polar_index in self.boundary.iter() {
-            let array_pos = self.index_map[polar_index];
-            if self.terrain_verts[array_pos].destroyed {
-                new_boundary.push(
-                    self.find_intact_vert(polar_index)
-                );
-            }else {
-                new_boundary.push(*polar_index);
-            }
-        }
-        new_boundary.dedup();
-
-        self.boundary = new_boundary;
-
-        self.boundary.len() >= 3
+        true
 
     }
 
@@ -221,40 +176,11 @@ impl Asteroid {
         raw_dis as f32 * wobble_strength
     }
 
-    pub fn find_intact_vert(
-        &self,
-        polar_index: &PolarIndex
-    ) -> PolarIndex {
-        let mut current = *polar_index;
-
-        while current.ring > 0 && self.terrain_verts[self.index_map[&current]].destroyed {
-            let from_segments = 6 * current.ring;
-            let to_ring = current.ring - 1;
-            let to_segments = if to_ring == 0 { 1 } else { 6 * to_ring };
-
-            let new_point = Asteroid::remap_point(current.point, from_segments, to_segments);
-
-            current = PolarIndex::new(to_ring, new_point);
-        }
-
-        current
-    }
-    
-    pub fn remap_point(point: usize, from_segment:usize, to_segment:usize) -> usize {
-        if to_segment == 0 {
-            return 0;
-        }
-        let scaled = point as f32 
-            * to_segment as f32 
-            / from_segment as f32;
-        (scaled.round() as usize) % to_segment
-    }
-
     pub fn update_asteroid(
         &mut self,
         rigid_body_handle: RigidBodyHandle,
         physics_world: &mut PhysicsWorld,
-    ) -> bool{
+    ) -> bool {
         let mut verts_changed: bool = false;
         for vert in self.terrain_verts.iter_mut() {
             if vert.update_vert(&physics_world.narrow_phase, &mut physics_world.collider_set) {
@@ -263,18 +189,23 @@ impl Asteroid {
         }
         
         if verts_changed{
-            if !self.build_boundary(){
-                return true;
-            }
-
-            self.rebuild_asteroid_collider(
+            if !self.build_asteroid_collider(
                 rigid_body_handle,
                 physics_world
-            );
+            ) {
+                return true;
+            }
         }
 
         false
     }
+}
+
+pub struct AsteroidVert {
+    pub local_transform: Vec2,
+    pub index: PolarIndex,
+    pub sensor_handle: ColliderHandle,
+    pub destroyed: bool,
 }
 
 impl AsteroidVert {
@@ -316,20 +247,56 @@ impl AsteroidVert {
     }
 }
 
-
 pub fn build_asteroid_collider(
-    boundary: &Vec<PolarIndex>,
+    rings: usize,
     index_map: &HashMap<PolarIndex, usize>,
-    terrain_verts: &Vec<AsteroidVert>,
-) -> Collider {
-    let outline: Vec<Vec2> = boundary.iter()
-        .map(|polar_index| {
-            let array_pos = index_map[polar_index];
-            terrain_verts[array_pos].local_transform
-        })
-        .collect();
-    ColliderBuilder::convex_decomposition(
-        &outline,
-        &Asteroid::build_polyline_indices(outline.len()),
-        ).restitution(0.2).build()
+    terrain_verts: &[AsteroidVert],
+) -> Option<Collider> {
+    let shapes = build_triangle_shapes(rings, index_map, terrain_verts);
+    if shapes.is_empty() {
+        return None;
+    }
+    Some(ColliderBuilder::compound(shapes).restitution(0.2).build())
 }
+
+fn build_triangle_shapes(
+    rings: usize,
+    index_map: &HashMap<PolarIndex, usize>,
+    terrain_verts: &[AsteroidVert],
+) -> Vec<(Pose, SharedShape)> {
+    let vert = |ring: usize, point: usize| &terrain_verts[index_map[&PolarIndex::new(ring, point)]];
+
+    let mut shapes = Vec::new();
+    let mut add = |a: &AsteroidVert, b: &AsteroidVert, c: &AsteroidVert| {
+        if a.destroyed || b.destroyed || c.destroyed {
+            return;
+        }
+        shapes.push((
+            Pose::IDENTITY,
+            SharedShape::triangle(a.local_transform, b.local_transform, c.local_transform),
+        ));
+    };
+
+    for r in 1..rings {
+        let outer_n = 6 * r;
+        let inner_n = if r == 1 { 1 } else { 6 * (r - 1) };
+
+        for s in 0..6 {
+            for k in 0..r {
+                let o0 = vert(r, (s * r + k) % outer_n);
+                let o1 = vert(r, (s * r + k + 1) % outer_n);
+                let i0 = vert(r - 1, (s * (r - 1) + k) % inner_n);
+
+                add(o0, o1, i0);
+
+                if k < r - 1 {
+                    let i1 = vert(r - 1, (s * (r - 1) + k + 1) % inner_n);
+                    add(i0, o1, i1);
+                }
+            }
+        }
+    }
+
+    shapes
+}
+

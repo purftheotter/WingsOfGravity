@@ -169,9 +169,9 @@ impl Game {
                 &mut self.physics_world.collider_set,
                 &self.render_context.assets,
                 Pose2::new(
-                    Vec2::new(10.0, 5.0),
+                    Vec2::new(15.0, 5.0),
                     0.0),
-                3,
+                4,
                 10.0,
                 self.game_seed,
                 0.4,
@@ -427,4 +427,5 @@ impl Game {
 
         Ok(())  
     }
+
 }
