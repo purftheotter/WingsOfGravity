@@ -19,6 +19,7 @@ pub struct Asteroid {
     pub index_map: HashMap<PolarIndex, usize>,
     pub rings: usize,
     pub sprite: Sprite,
+
 }
 
 
@@ -86,6 +87,8 @@ impl Asteroid {
 
         let subdivisions = *subdivisions;
 
+        let vert_radius =  base_radius / subdivisions as f32;
+
         let center_index = PolarIndex::new(0, 0);
         verticies.push(
             AsteroidVert::new(
@@ -93,7 +96,8 @@ impl Asteroid {
                 rigid_body_set,
                 rigid_body_handle,
                 Vec2::new(0.0, 0.0),
-                center_index
+                center_index,
+                vert_radius,
             )
         );
 
@@ -131,7 +135,8 @@ impl Asteroid {
                         rigid_body_set,
                         rigid_body_handle,
                         local_transform,
-                        polar_idx
+                        polar_idx,
+                        vert_radius,
                     )
                 );
 
@@ -215,8 +220,9 @@ impl AsteroidVert {
         rigid_body_handle: &RigidBodyHandle,
         local_transform: Vec2,
         index: PolarIndex,
+        sensor_radius: f32,
         ) -> Self{
-        let sensor = ColliderBuilder::ball(1.0)
+        let sensor = ColliderBuilder::ball(sensor_radius)
             .sensor(true)
             .translation(local_transform)
             .collision_groups(InteractionGroups::new(
@@ -228,7 +234,6 @@ impl AsteroidVert {
         let sensor_handle = collider_set.insert_with_parent(sensor, *rigid_body_handle, rigid_body_set);
 
         Self { local_transform, index, sensor_handle, destroyed: false}
-
     }
 
     pub fn update_vert(&mut self, narrow_phase: &NarrowPhase, collider_set: &mut ColliderSet) -> bool{
@@ -278,20 +283,20 @@ fn build_triangle_shapes(
     };
 
     for r in 1..rings {
-        let outer_n = 6 * r;
-        let inner_n = if r == 1 { 1 } else { 6 * (r - 1) };
+        let outer_ring_n = 6 * r;
+        let inner_ring_n = if r == 1 { 1 } else { 6 * (r - 1) };
 
         for s in 0..6 {
             for k in 0..r {
-                let o0 = vert(r, (s * r + k) % outer_n);
-                let o1 = vert(r, (s * r + k + 1) % outer_n);
-                let i0 = vert(r - 1, (s * (r - 1) + k) % inner_n);
+                let outer0 = vert(r, (s * r + k) % outer_ring_n);
+                let outer1 = vert(r, (s * r + k + 1) % outer_ring_n);
+                let inner0 = vert(r - 1, (s * (r - 1) + k) % inner_ring_n);
 
-                add(o0, o1, i0);
+                add(outer0, outer1, inner0);
 
                 if k < r - 1 {
-                    let i1 = vert(r - 1, (s * (r - 1) + k + 1) % inner_n);
-                    add(i0, o1, i1);
+                    let inner1 = vert(r - 1, (s * (r - 1) + k + 1) % inner_ring_n);
+                    add(inner0, outer1, inner1);
                 }
             }
         }
