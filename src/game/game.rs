@@ -1,3 +1,4 @@
+use rand::random;
 use rapier2d::prelude::*;
 
 use std::time::Instant;
@@ -30,6 +31,7 @@ pub struct Game {
     pub entities: Vec<Entity>,
     pub player_index: Option<usize>,
     pub ship_database: ShipDatabase,
+    pub game_seed: u32,
 }
 
 impl Game {
@@ -84,6 +86,8 @@ impl Game {
         //entities
         let entities = vec![];
 
+        let game_seed:u32 = random();
+
 
         Ok(Self {
             render_context,
@@ -95,6 +99,7 @@ impl Game {
             debug_mode:false,
             player_index: None,
             ship_database,
+            game_seed,
 
         })
     }
@@ -168,6 +173,7 @@ impl Game {
                     0.0),
                 3,
                 10.0,
+                self.game_seed,
                 0.4,
             )
         );
@@ -193,7 +199,7 @@ impl Game {
             last_frame = current_frame;
 
             self.handle_input();
-            self.update_ships(dt);
+            self.update_ships();
             self.update_weapons(dt);
             
             self.physics_world.step(dt);
@@ -232,13 +238,9 @@ impl Game {
         );
     }
 
-    pub fn update_ships(&mut self, dt:f32) {
+    pub fn update_ships(&mut self) {
         for entity in self.entities.iter_mut() {
             if let Some(ship) = &mut entity.ship_component {
-
-                for weapon in ship.weapons.iter_mut() {
-                    weapon.tick(dt);
-                }
 
                 let ship_stats = self.ship_database.get(ship.class);
                 apply_ship_movements(
@@ -253,14 +255,11 @@ impl Game {
     pub fn update_asteroids(&mut self) {
         for entity in self.entities.iter_mut() {
             if let Some(asteroid) = &mut entity.asteroid {
-                if !asteroid.update_asteroid(
+                if asteroid.update_asteroid(
                     entity.rigid_body_handle,
                     &mut self.physics_world
                 ){
                     println!("delete asteroid entity");
-                }
-                for point in asteroid.boundary.iter() {
-                    print!("{:?}, ", point);
                 }
                 
             }
@@ -273,7 +272,13 @@ impl Game {
         let mut new_projectiles:Vec<Entity> = vec![];
 
         for entity in self.entities.iter_mut() {
+
             if let Some(ship) = &mut entity.ship_component {
+                
+                for weapon in ship.weapons.iter_mut() {
+                    weapon.tick(dt);
+                }
+
                 if ship.input.primary_fire {
                     let weapon = &mut ship.weapons[0];
                     

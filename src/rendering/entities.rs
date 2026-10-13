@@ -14,7 +14,10 @@ pub fn render_projectile(
         render_context.world_to_screen(entity.position.translation);
 
     if let Some(texture) = 
-        render_context.assets.get("green_bullet") {
+        render_context.assets.get(
+            entity.projectile.as_ref().unwrap()
+                .sprite.texture_id.as_str()
+        ) {
     
         let world_width = 1.0;
         let world_height = 1.0;

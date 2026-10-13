@@ -124,6 +124,7 @@ pub fn spawn_asteroid(
     spawn_pos: Pose2,
     subdivisions: usize,
     radius: f32,
+    seed: u32,
     noise_strength: f32,
 ) -> Entity {
 
@@ -140,7 +141,7 @@ pub fn spawn_asteroid(
         &rigid_body_handle,
         subdivisions,
         radius,
-        entity_id as u32,
+        entity_id as u32 + seed,
         noise_strength,
         Sprite::new(assets, "asteroid".to_string())
     );
