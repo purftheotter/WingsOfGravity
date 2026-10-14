@@ -14,6 +14,8 @@ pub enum ProjectileType {
     Laser,
 }
 
+
+#[derive(Debug)]
 pub struct Projectile {
     pub projectile_type: ProjectileType,
     pub sprite: Sprite,

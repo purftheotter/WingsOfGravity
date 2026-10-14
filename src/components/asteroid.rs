@@ -13,6 +13,7 @@ use crate::components::sprite::Sprite;
 use crate::core::*;
 use crate::physics_world::*;
 
+#[derive(Debug)]
 pub struct Asteroid {
     pub terrain_verts: Vec<AsteroidVert>,
     pub hull_handle: ColliderHandle,
@@ -206,6 +207,7 @@ impl Asteroid {
     }
 }
 
+#[derive(Debug)]
 pub struct AsteroidVert {
     pub local_transform: Vec2,
     pub index: PolarIndex,

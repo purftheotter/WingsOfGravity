@@ -1,5 +1,6 @@
 use rapier2d::math::Pose2;
 
+#[derive(Debug)]
 pub struct Weapon {
     pub weapon_type: WeaponType,
     pub local_offset: Pose2,
@@ -12,6 +13,7 @@ pub struct Weapon {
     
 }
 
+#[derive(Debug)]
 pub enum WeaponType {
     MachineGun,
     LaserBeam,

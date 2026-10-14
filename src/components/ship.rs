@@ -10,6 +10,7 @@ pub enum ShipClass {
     Freighter,
 }
 
+#[derive(Debug)]
 pub struct ShipComponent {
     pub class: ShipClass,
     pub sprite: Sprite,
@@ -29,7 +30,7 @@ pub struct ShipStats {
 }
 
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ShipInput {
     pub thrust: f32,
     pub turn: f32,

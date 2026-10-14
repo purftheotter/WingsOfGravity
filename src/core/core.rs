@@ -16,6 +16,12 @@ impl PolarIndex {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct Slot {
+    pub generation: u32,
+    pub index: Option<usize>,
+}
+
 pub fn rotate_pos_around(pose: Pose2, pivot: Vec2, rot: Rot2) -> Pose2 {
     Pose2::from_parts(
         pivot + rot * (pose.translation - pivot),

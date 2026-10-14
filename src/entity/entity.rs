@@ -5,6 +5,19 @@ use crate::components::asteroid::Asteroid;
 use crate::components::ship::ShipComponent;
 use crate::components::projectile::Projectile;
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct EntityId {
+    pub slot: u32,
+    pub generation: u32,
+}
+
+impl EntityId {
+    pub const PLACEHOLDER: EntityId = EntityId {
+        slot: u32::MAX,
+        generation: u32::MAX
+    };
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum EntityType {
     Ship,
@@ -12,8 +25,9 @@ pub enum EntityType {
     Projectile,
 }
 
+#[derive(Debug)]
 pub struct Entity {
-    pub entity_id: usize,
+    pub id: EntityId,
 
     pub rigid_body_handle: RigidBodyHandle,
 

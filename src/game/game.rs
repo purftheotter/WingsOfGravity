@@ -8,18 +8,15 @@ use sdl2::EventPump;
 use crate::render_context::RenderContext;
 use crate::rendering::*;
 use crate::rendering::debug::*;
-
 use crate::physics_world::PhysicsWorld;
-
 use crate::assets::ShipDatabase;
-
 use crate::game::input::*;
-
 use crate::entity::*;
-
 use crate::systems::ship_movement::*;
-
 use crate::components::*;
+use crate::core::*;
+
+
 
 pub struct Game {
     pub render_context: RenderContext,
@@ -27,9 +24,10 @@ pub struct Game {
     pub running: bool,
     pub debug_mode: bool,
     pub physics_world: PhysicsWorld,
-    pub next_entity_id: usize,
     pub entities: Vec<Entity>,
-    pub player_index: Option<usize>,
+    pub slots: Vec<Slot>,
+    pub free_slots: Vec<u32>,
+    pub player_id: Option<EntityId>,
     pub ship_database: ShipDatabase,
     pub game_seed: u32,
 }
@@ -80,27 +78,27 @@ impl Game {
         //make ship database
         let ship_database = ShipDatabase::load().expect("Failing while trying to load ShipDatabase");
 
-        //next_entity_id
-        let next_entity_id:usize = 0;
-
         //entities
         let entities = vec![];
 
         let game_seed:u32 = random();
 
+        let slots = vec![];
+
+        let free_slots = vec![];
 
         Ok(Self {
             render_context,
             physics_world,
             event_pump,
-            next_entity_id,
             entities,
             running: true,
             debug_mode:false,
-            player_index: None,
+            player_id: None,
             ship_database,
             game_seed,
-
+            slots,
+            free_slots,
         })
     }
 
@@ -141,11 +139,10 @@ impl Game {
     pub fn load_world(
         &mut self,
         ) -> Result<(), String> {
-
+        
         //spawn_player
-        self.entities.push(
-            spawn_player(
-                self.next_entity_id,
+        
+        let player = spawn_player(
                 Pose2::new(
                     Vec2::new(0.0, 0.0),
                     0.0
@@ -155,28 +152,29 @@ impl Game {
                 &mut self.physics_world.rigid_body_set,
                 &mut self.physics_world.collider_set,
                 &self.render_context.assets
-            )
-        );
-        self.player_index = Some(self.next_entity_id);
+            );
 
-        self.next_entity_id += 1;
+        self.add_entity(
+            player,
+            true,
+        );
+
 
         //spawn_asteroid
-        self.entities.push(
-            spawn_asteroid(
-                self.next_entity_id,
-                &mut self.physics_world.rigid_body_set,
-                &mut self.physics_world.collider_set,
-                &self.render_context.assets,
-                Pose2::new(
-                    Vec2::new(20.0, 5.0),
-                    0.0),
-                4,
-                5.0,
-                self.game_seed,
-                0.4,
-            )
+        let asteroid = spawn_asteroid(
+            &mut self.physics_world.rigid_body_set,
+            &mut self.physics_world.collider_set,
+            &self.render_context.assets,
+            Pose2::new(
+                Vec2::new(20.0, 5.0),
+                0.0),
+            4,
+            5.0,
+            self.game_seed,
+            0.4,
         );
+
+        self.add_entity(asteroid, false);
 
         Ok(())
     }
@@ -219,16 +217,21 @@ impl Game {
             self.debug_render()?;
 
             self.render_context.present();
+
+            for entity in self.entities.iter() {
+                println!("{:?}, ", entity.id);
+            }
+            println!("___________");
+
         }
 
         Ok(())
     }
 
     pub fn handle_input(&mut self) {
-        if let Some(player_index) = self.player_index {
-            let mut player = &mut self.entities[player_index];
-            let keyboard_state = &self.event_pump.keyboard_state();
-                player_input(&keyboard_state, &mut player);
+        if let Some(index) = self.player_id.and_then(|id| self.index_of(id)) {
+            let keyboard_state = self.event_pump.keyboard_state();
+            player_input(&keyboard_state, &mut self.entities[index]);
         }
 
         exiting_debug_input(
@@ -253,78 +256,71 @@ impl Game {
     }
 
     pub fn update_asteroids(&mut self) {
+        let mut entities_to_remove = vec![];
         for entity in self.entities.iter_mut() {
             if let Some(asteroid) = &mut entity.asteroid {
                 if asteroid.update_asteroid(
                     entity.rigid_body_handle,
                     &mut self.physics_world
                 ){
-                    println!("delete asteroid entity");
+                    entities_to_remove.push(entity.id);
                 }
-                
             }
-
+        }
+        for id in entities_to_remove {
+            self.remove_entity(id);
         }
     }
 
     pub fn update_weapons(&mut self, dt: f32) {
-
-        let mut new_projectiles:Vec<Entity> = vec![];
+        let mut new_projectiles: Vec<Entity> = vec![];
 
         for entity in self.entities.iter_mut() {
-
             if let Some(ship) = &mut entity.ship_component {
-                
                 for weapon in ship.weapons.iter_mut() {
                     weapon.tick(dt);
                 }
 
                 if ship.input.primary_fire {
                     let weapon = &mut ship.weapons[0];
-                    
+
                     if weapon.fire(dt) {
-                        let spawn_pos = 
-                            entity.position * weapon.local_offset;
+                        let spawn_pos = entity.position * weapon.local_offset;
 
-                        let ship_linvel = 
-                            self.physics_world.rigid_body_set
-                                .get(entity.rigid_body_handle)
-                                .unwrap()
-                                .linvel()
-                                .clone();
+                        let ship_linvel = self.physics_world.rigid_body_set
+                            .get(entity.rigid_body_handle)
+                            .unwrap()
+                            .linvel();
 
-                        let muzzle_vel = spawn_pos.rotation 
+                        let muzzle_vel = spawn_pos.rotation
                             * Vec2::new(0.0, -weapon.init_vel_mag);
 
-                        new_projectiles.push(
-                            fire_prjectile(
-                                self.next_entity_id,
-                                spawn_pos,
-                                ship_linvel + muzzle_vel,
-                                weapon,
-                                &mut self.physics_world.rigid_body_set,
-                                &mut self.physics_world.collider_set,
-                                &self.render_context.assets,
-                            )
-                        );
-
-                        self.next_entity_id += 1;
+                        new_projectiles.push(fire_prjectile(
+                            spawn_pos,
+                            ship_linvel + muzzle_vel,
+                            weapon,
+                            &mut self.physics_world.rigid_body_set,
+                            &mut self.physics_world.collider_set,
+                            &self.render_context.assets,
+                        ));
                     }
                 }
             }
         }
-        self.entities.append(&mut new_projectiles);
+
+        for projectile in new_projectiles {
+            self.add_entity(projectile, false);
+        }
     }
 
-    pub fn check_projectile_impacts(&mut self) -> Vec<usize> {
-        let mut hit_indices = vec![];
+    pub fn check_projectile_impacts(&mut self) -> Vec<EntityId> {
+        let mut hit_ids = vec![];
         let mut newly_exploded = vec![];
 
-        for (i, entity) in self.entities.iter_mut().enumerate() {
+        for entity in self.entities.iter_mut() {
             if let Some(projectile) = &mut entity.projectile {
-
                 if projectile.exploded {
-                    hit_indices.push(i);
+                    hit_ids.push(entity.id);
                     continue;
                 }
 
@@ -334,36 +330,25 @@ impl Game {
 
                 if has_hit {
                     projectile.exploded = true;
-                    if let Some(explosion_handle) = 
-                        projectile.explosion_handle {
-                            newly_exploded.push(
-                                explosion_handle
-                            );
-                        }
+                    if let Some(explosion_handle) = projectile.explosion_handle {
+                        newly_exploded.push(explosion_handle);
+                    }
                 }
             }
         }
 
-        for collider in newly_exploded {
-            let collider = 
-                self.physics_world.collider_set.get_mut(collider).unwrap();
-            collider.set_enabled(true);
+        for handle in newly_exploded {
+            if let Some(collider) = self.physics_world.collider_set.get_mut(handle) {
+                collider.set_enabled(true);
+            }
         }
 
-        hit_indices
+        hit_ids
     }
 
-    pub fn remove_hit_projectile(&mut self, hit_indices: Vec<usize>) {
-        for &i in hit_indices.iter().rev() {
-            let entity = self.entities.remove(i);
-            self.physics_world.rigid_body_set.remove(
-                entity.rigid_body_handle,
-                &mut self.physics_world.island_manager,
-                &mut self.physics_world.collider_set,
-                &mut self.physics_world.impulse_joint_set,
-                &mut self.physics_world.multibody_joint_set,
-                true,
-            );
+    pub fn remove_hit_projectile(&mut self, hit_ids: Vec<EntityId>) {
+        for id in hit_ids {
+            self.remove_entity(id);
         }
     }
 
@@ -377,15 +362,16 @@ impl Game {
         }
     }
 
-    pub fn update_camra_pos(
-        &mut self,
-    ) {
-        if let Some(player_index) = self.player_index {
-            let player_entity = &self.entities[player_index];
-            self.render_context.camera_position =
-                player_entity.position;
-            self.render_context.camera_position.rotation = Rot2::new(0.0);
-        }
+    pub fn update_camra_pos(&mut self) {
+        let Some(pos) = self.player_id
+            .and_then(|id| self.get_entity(id))
+            .map(|e| e.position)
+        else {
+            return;
+        };
+
+        self.render_context.camera_position = pos;
+        self.render_context.camera_position.rotation = Rot2::new(0.0);
     }
 
     pub fn render(
@@ -428,4 +414,79 @@ impl Game {
         Ok(())  
     }
 
+    pub fn add_entity(
+        &mut self,
+        mut entity: Entity,
+        is_player: bool
+    ) -> EntityId {
+        let index = self.entities.len();
+
+        let id = if let Some(slot) = self.free_slots.pop() {
+            let s = &mut self.slots[slot as usize];
+            s.index = Some(index);
+            EntityId { slot, generation: s.generation}
+        //setup for making the loop run at a consistent rate
+        } else {
+            let slot = self.slots.len() as u32;
+            self.slots.push(Slot { generation: 0, index: Some(index)});
+            EntityId { slot, generation: 0 }
+        };
+
+        entity.id = id;
+        self.entities.push(entity);
+
+        if is_player {
+            self.player_id = Some(id);
+        }
+        id
+    }
+
+    fn index_of(&self, id: EntityId) -> Option<usize> {
+        let slot = self.slots.get(id.slot as usize)?;
+        if slot.generation != id.generation {
+            return None;
+        }
+        slot.index
+    }
+
+    pub fn get_entity(&self, id: EntityId) -> Option<&Entity> {
+        self.entities.get(self.index_of(id)?)
+    }
+    
+    pub fn get_mut_entity(
+        &mut self,
+        id: EntityId
+        ) -> Option<&mut Entity> {
+        let index = self.index_of(id)?;
+        self.entities.get_mut(index)
+    }
+
+    pub fn remove_entity(&mut self, id: EntityId) -> Option<Entity> {
+        let index = self.index_of(id)?;
+        let removed = self.entities.swap_remove(index);
+
+        if index < self.entities.len() {
+            let moved = self.entities[index].id;
+            self.slots[moved.slot as usize].index = Some(index);
+        }
+
+        let slot = &mut self.slots[id.slot as usize];
+        slot.index = None;
+        slot.generation = slot.generation.wrapping_add(1);
+        self.free_slots.push(id.slot);
+
+        self.physics_world.rigid_body_set.remove(
+            removed.rigid_body_handle,
+            &mut self.physics_world.island_manager,
+            &mut self.physics_world.collider_set,
+            &mut self.physics_world.impulse_joint_set,
+            &mut self.physics_world.multibody_joint_set,
+            true,
+        );
+
+        if self.player_id == Some(id) {
+            self.player_id = None;
+        }
+        Some(removed)
+    }
 }

@@ -13,7 +13,6 @@ use crate::physics_world::*;
 use crate::rendering::Assets;
 
 pub fn spawn_player(
-    entity_id: usize,
     spawn_pos:Pose2,
     class: ShipClass,
     ship_database: &ShipDatabase,
@@ -21,7 +20,6 @@ pub fn spawn_player(
     collider_set: &mut ColliderSet,
     assets: &Assets,
 ) -> Entity {
-
     let rigid_body = RigidBodyBuilder::dynamic()
         .translation(spawn_pos.translation)
         .build();
@@ -31,12 +29,12 @@ pub fn spawn_player(
     let sprite = Sprite::new(assets, "fighter".to_string());
 
     let player_entity = Entity {
-        entity_id,
+        id: EntityId::PLACEHOLDER,
         rigid_body_handle,
         position: spawn_pos,
         entity_type: EntityType::Ship,
         ship_component: Some(ShipComponent {
-            class: class,
+            class,
             sprite,
             input: ShipInput::new(),
             weapons: vec![Weapon {
@@ -69,13 +67,10 @@ pub fn spawn_player(
 
     collider_set.insert_with_parent(collider, rigid_body_handle, rigidbody_set);
 
-
     player_entity
-
 }
 
 pub fn fire_prjectile(
-    entity_id: usize,
     spawn_pos: Pose2,
     velocity: Vec2,
     weapon: &Weapon,
@@ -83,7 +78,6 @@ pub fn fire_prjectile(
     collider_set: &mut ColliderSet,
     assets: &Assets,
 ) -> Entity {
-
     let rigid_body = RigidBodyBuilder::dynamic()
         .pose(spawn_pos)
         .linvel(velocity)
@@ -102,7 +96,7 @@ pub fn fire_prjectile(
     ));
 
     let entity = Entity {
-        entity_id,
+        id: EntityId::PLACEHOLDER,
         rigid_body_handle,
         position: spawn_pos,
         entity_type: EntityType::Projectile,
@@ -113,11 +107,9 @@ pub fn fire_prjectile(
     };
 
     entity
-
 }
 
 pub fn spawn_asteroid(
-    entity_id: usize,
     rigid_body_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
     assets: &Assets,
@@ -127,7 +119,6 @@ pub fn spawn_asteroid(
     seed: u32,
     noise_strength: f32,
 ) -> Entity {
-
     let rigid_body = RigidBodyBuilder::dynamic()
         .can_sleep(false)
         .pose(spawn_pos)
@@ -141,13 +132,13 @@ pub fn spawn_asteroid(
         &rigid_body_handle,
         subdivisions,
         radius,
-        entity_id as u32 + seed,
+        seed,
         noise_strength,
         Sprite::new(assets, "asteroid".to_string())
     );
 
     let entity = Entity {
-        entity_id,
+        id: EntityId::PLACEHOLDER,
         rigid_body_handle,
         position: spawn_pos,
         entity_type: EntityType::Asteroid,
@@ -157,7 +148,6 @@ pub fn spawn_asteroid(
     };
 
     entity
-    
 }
 
 
