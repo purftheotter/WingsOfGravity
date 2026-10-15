@@ -12,11 +12,13 @@ use std::f32::consts::PI;
 use crate::components::sprite::Sprite;
 use crate::core::*;
 use crate::physics_world::*;
+use crate::rendering::pixel_data::PixelData;
 
 #[derive(Debug)]
 pub struct Asteroid {
-    pub terrain_verts: Vec<AsteroidVert>,
     pub hull_handle: ColliderHandle,
+    pub mask: AsteroidMask,
+    pub terrain_verts: Vec<AsteroidVert>,
     pub index_map: HashMap<PolarIndex, usize>,
     pub rings: usize,
     pub sprite: Sprite,
@@ -34,6 +36,7 @@ impl Asteroid {
         seed: u32,
         noise_strength: f32,
         sprite: Sprite,
+        texel: f32,
         ) -> Self {
 
         let mut noise = Fbm::<Perlin>::new(seed);
@@ -66,9 +69,18 @@ impl Asteroid {
             rigid_body_set
             );
 
+        let extent = terrain_verts
+            .iter()
+            .map(|v| v.local_transform.length())
+            .fold(0.0_f32, f32::max);
+         
+        let mut mask = AsteroidMask::new(extent, texel);
+        mask.rebuild(&visible_triangles(subdivisions, &index_map, &terrain_verts));
+
         Self {
-            terrain_verts,
             hull_handle,
+            mask,
+            terrain_verts,
             index_map,
             rings: subdivisions,
             sprite,
@@ -170,6 +182,13 @@ impl Asteroid {
                 rigid_body_handle,
                 &mut physics_world.rigid_body_set);
 
+        self.mask.rebuild(&visible_triangles(
+            self.rings,
+            &self.index_map,
+            &self.terrain_verts,
+        ));
+
+
         true
 
     }
@@ -254,6 +273,71 @@ impl AsteroidVert {
     }
 }
 
+#[derive(Debug)]
+pub struct AsteroidMask {
+    pub size: usize,
+    pub texel: f32,
+    alpha: Vec<u8>,
+    pub dirty: bool,
+}
+
+impl AsteroidMask {
+    pub fn new(max_extent: f32, texel: f32) -> Self {
+        let size = ((2.0 * max_extent) / texel).ceil() as usize + 2;
+        Self { size, texel, alpha: vec![0; size * size], dirty: true }
+    }
+
+    /// Asteroid-local world position -> texel coordinates (centre = texture centre).
+    /// No y flip: RenderContext::world_to_screen maps world y straight to screen y.
+    fn to_texel(&self, p: Vec2) -> Vec2 {
+        Vec2::new(p.x, p.y) / self.texel + Vec2::splat(self.size as f32 * 0.5)
+    }
+
+    /// Call whenever the collider is rebuilt.
+    pub fn rebuild(&mut self, triangles: &[[Vec2; 3]]) {
+        self.alpha.fill(0);
+        let max = (self.size - 1) as f32;
+
+        for &[a, b, c] in triangles {
+            let (a, b, c) = (self.to_texel(a), self.to_texel(b), self.to_texel(c));
+
+            // Bounding box of the triangle in texel space
+            let min = a.min(b).min(c).floor().max(Vec2::ZERO);
+            let hi = a.max(b).max(c).ceil().min(Vec2::splat(max));
+
+            for y in min.y as usize..=hi.y as usize {
+                for x in min.x as usize..=hi.x as usize {
+                    // Sample at the texel centre -> hard, pixel-aligned edges
+                    let p = Vec2::new(x as f32 + 0.5, y as f32 + 0.5);
+                    if point_in_triangle(p, a, b, c) {
+                        self.alpha[y * self.size + x] = 255;
+                    }
+                }
+            }
+        }
+        self.dirty = true;
+    }
+
+    /// Combine with the rock texture: rock colour where alpha is set.
+    /// The rock is TILED at native resolution (1 rock pixel = 1 texel),
+    /// never stretched, so pixel size stays constant.
+    pub fn to_rgba(&self, rock: &PixelData) -> Vec<u8> {
+        let mut out = vec![0u8; self.size * self.size * 4];
+        for y in 0..self.size {
+            for x in 0..self.size {
+                let i = y * self.size + x;
+                if self.alpha[i] == 0 {
+                    continue;
+                }
+                let r = ((y % rock.h) * rock.w + (x % rock.w)) * 4;
+                out[i * 4..i * 4 + 3].copy_from_slice(&rock.rgba[r..r + 3]);
+                out[i * 4 + 3] = 255;
+            }
+        }
+        out
+    }
+}
+
 pub fn build_asteroid_collider(
     rings: usize,
     index_map: &HashMap<PolarIndex, usize>,
@@ -271,17 +355,25 @@ fn build_triangle_shapes(
     index_map: &HashMap<PolarIndex, usize>,
     terrain_verts: &[AsteroidVert],
 ) -> Vec<(Pose, SharedShape)> {
+    visible_triangles(rings, index_map, terrain_verts)
+        .into_iter()
+        .map(|[a,b,c]| (Pose::IDENTITY, SharedShape::triangle(a, b, c)))
+        .collect()
+}
+
+pub fn visible_triangles(
+    rings: usize,
+    index_map: &HashMap<PolarIndex, usize>,
+    terrain_verts: &[AsteroidVert],
+) -> Vec<[Vec2; 3]> {
     let vert = |ring: usize, point: usize| &terrain_verts[index_map[&PolarIndex::new(ring, point)]];
 
-    let mut shapes = Vec::new();
+    let mut tris = Vec::new();
     let mut add = |a: &AsteroidVert, b: &AsteroidVert, c: &AsteroidVert| {
         if a.destroyed || b.destroyed || c.destroyed {
             return;
         }
-        shapes.push((
-            Pose::IDENTITY,
-            SharedShape::triangle(a.local_transform, b.local_transform, c.local_transform),
-        ));
+        tris.push([a.local_transform, b.local_transform, c.local_transform]);
     };
 
     for r in 1..rings {
@@ -293,7 +385,6 @@ fn build_triangle_shapes(
                 let outer0 = vert(r, (s * r + k) % outer_ring_n);
                 let outer1 = vert(r, (s * r + k + 1) % outer_ring_n);
                 let inner0 = vert(r - 1, (s * (r - 1) + k) % inner_ring_n);
-
                 add(outer0, outer1, inner0);
 
                 if k < r - 1 {
@@ -303,7 +394,5 @@ fn build_triangle_shapes(
             }
         }
     }
-
-    shapes
+    tris
 }
-

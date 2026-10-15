@@ -10,6 +10,7 @@ use crate::components::*;
 use crate::entity::*;
 use crate::components::asteroid::*;
 use crate::physics_world::*;
+use crate::render_context::RenderContext;
 use crate::rendering::Assets;
 
 pub fn spawn_player(
@@ -112,13 +113,14 @@ pub fn fire_prjectile(
 pub fn spawn_asteroid(
     rigid_body_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
-    assets: &Assets,
+    render_context: &RenderContext,
     spawn_pos: Pose2,
     subdivisions: usize,
     radius: f32,
     seed: u32,
     noise_strength: f32,
 ) -> Entity {
+    let assets = &render_context.assets;
     let rigid_body = RigidBodyBuilder::dynamic()
         .can_sleep(false)
         .pose(spawn_pos)
@@ -134,7 +136,8 @@ pub fn spawn_asteroid(
         radius,
         seed,
         noise_strength,
-        Sprite::new(assets, "asteroid".to_string())
+        Sprite::new(assets, "asteroid".to_string()),
+        render_context.meters_per_texel,
     );
 
     let entity = Entity {

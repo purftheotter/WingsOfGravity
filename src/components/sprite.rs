@@ -9,7 +9,7 @@ pub struct Sprite {
 
 impl Sprite {
     pub fn new(assets: &Assets, texture_id: String) -> Sprite {
-        let texture = assets.get(&texture_id).unwrap();
+        let texture = assets.get_texture(&texture_id).unwrap();
         let width = texture.query().width;
         let height = texture.query().height;
         Sprite {

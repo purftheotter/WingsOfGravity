@@ -6,6 +6,7 @@ use std::time::Instant;
 use sdl2::EventPump;
 
 use crate::render_context::RenderContext;
+use crate::rendering::asteroid_textures::AsteroidTextures;
 use crate::rendering::*;
 use crate::rendering::debug::*;
 use crate::physics_world::PhysicsWorld;
@@ -15,7 +16,6 @@ use crate::entity::*;
 use crate::systems::ship_movement::*;
 use crate::components::*;
 use crate::core::*;
-
 
 
 pub struct Game {
@@ -59,6 +59,8 @@ impl Game {
 
         let assets = Assets::new();
 
+        let asteroid_textures = AsteroidTextures::new();
+
         //create ttf_context
         let ttf_context = sdl2::ttf::init().unwrap();
 
@@ -66,10 +68,12 @@ impl Game {
             RenderContext::new(
                 canvas,
                 assets,
+                asteroid_textures,
                 ttf_context,
                 screen_width,
                 screen_height,
                 16.0,
+                0.1
                 );
 
         //Event pump
@@ -123,14 +127,19 @@ impl Game {
 
         self.render_context.assets.load_texture(
             &texture_creator,
-            "asteroid",
-            "assets/textures/asteroid.png"
+            "green_bullet",
+            "assets/textures/green_bullet.png"
         )?;
 
         self.render_context.assets.load_texture(
             &texture_creator,
-            "green_bullet",
-            "assets/textures/green_bullet.png"
+            "asteroid",
+            "assets/textures/asteroid.png"
+        )?;
+
+        self.render_context.assets.load_pixels(
+            "asteroid", 
+            "assets/textures/asteroid.png"
         )?;
 
         Ok(())
@@ -164,11 +173,11 @@ impl Game {
         let asteroid = spawn_asteroid(
             &mut self.physics_world.rigid_body_set,
             &mut self.physics_world.collider_set,
-            &self.render_context.assets,
+            &self.render_context,
             Pose2::new(
                 Vec2::new(20.0, 5.0),
                 0.0),
-            4,
+            6,
             5.0,
             self.game_seed,
             0.4,
@@ -379,7 +388,7 @@ impl Game {
         ) -> Result<(), String> {
         self.render_context.render_bg("background", 1.0, 5.0)?;
 
-        for entity in self.entities.iter() {
+        for entity in self.entities.iter_mut() {
             match entity.entity_type {
                 EntityType::Ship => {
                     render_ship(
@@ -391,7 +400,12 @@ impl Game {
                 EntityType::Projectile => {
                     render_projectile(entity, &mut self.render_context)?
                 }
-                EntityType::Asteroid => {}
+                EntityType::Asteroid => {
+                    render_asteroid(
+                        entity,
+                        &mut self.render_context,
+                    )?
+                }
             }
         }
 
@@ -464,6 +478,9 @@ impl Game {
     pub fn remove_entity(&mut self, id: EntityId) -> Option<Entity> {
         let index = self.index_of(id)?;
         let removed = self.entities.swap_remove(index);
+
+        let key = ((id.slot as u64) << 32) | id.generation as u64;
+        self.render_context.asteroid_textures.remove(key);
 
         if index < self.entities.len() {
             let moved = self.entities[index].id;

@@ -5,15 +5,18 @@ use sdl2::rect::*;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use crate::rendering::Assets;
+use crate::rendering::{Assets, asteroid_textures};
+use crate::rendering::asteroid_textures::AsteroidTextures;
 
 pub struct RenderContext {
     pub canvas: Canvas<Window>,
     pub assets: Assets,
+    pub asteroid_textures: AsteroidTextures,
     pub ttf_context: sdl2::ttf::Sdl2TtfContext,
     pub screen_width: u32,
     pub screen_height: u32,
     pub pixels_per_meter: f32,
+    pub meters_per_texel:f32,
     pub camera_position: Pose2,
 }
 
@@ -21,18 +24,22 @@ impl RenderContext {
     pub fn new(
         canvas: Canvas<Window>,
         assets: Assets,
+        asteroid_textures: AsteroidTextures,
         ttf_context: sdl2::ttf::Sdl2TtfContext,
         screen_width:u32,
         screen_height:u32,
         pixels_per_meter:f32,
+        meters_per_texel:f32,
         ) -> Self {
         Self { 
             canvas,
             assets,
+            asteroid_textures,
             ttf_context,
             screen_width, 
             screen_height, 
             pixels_per_meter,
+            meters_per_texel,
             camera_position: Pose2::new(Vec2::ZERO, 0.0)
         }
     }
@@ -65,7 +72,7 @@ impl RenderContext {
         scale: f32,
         ) -> Result<(), String> {
 
-        if let Some(texture) = self.assets.get(bg_id) {
+        if let Some(texture) = self.assets.get_texture(bg_id) {
             let tile = texture.query().width as f32 * scale;
             let cam = self.camera_position.translation * self.pixels_per_meter * parallax;
             let offset_x = (-cam.x).rem_euclid(tile);

@@ -2,16 +2,19 @@ use sdl2::image::LoadTexture;
 use sdl2::render::{Texture, TextureCreator};
 use sdl2::video::WindowContext;
 use std::collections::HashMap;
+use crate::rendering::pixel_data::PixelData;
 use crate::system_utils::*;
 
 pub struct Assets {
     pub textures: HashMap<String, Texture<'static>>,
+    pub pixels: HashMap<String, PixelData>
 }
 
 impl Assets {
     pub fn new() -> Self {
         Self {
             textures: HashMap::new(),
+            pixels: HashMap::new(),
         }
     }
 
@@ -32,15 +35,27 @@ impl Assets {
         Ok(())
     }
 
-    pub fn get(&self, id: &str) -> Option<&Texture<'static>> {
+    pub fn get_texture(&self, id: &str) -> Option<&Texture<'static>> {
         self.textures.get(id)
     }
 
-    pub fn get_mut(&mut self, id: &str) -> Option<&mut Texture<'static>> {
+    pub fn get_mut_texture(&mut self, id: &str) -> Option<&mut Texture<'static>> {
         self.textures.get_mut(id)
     }
 
     pub fn insert_texture(&mut self, id: &str, texture: Texture<'static>) {
         self.textures.insert(id.to_string(), texture);
-    }   
+    }
+    pub fn load_pixels(
+        &mut self,
+        id: &str,
+        path: &str
+    ) -> Result<(), String> {
+        self.pixels.insert(id.to_string(), PixelData::load(path)?);
+        Ok(())
+    }
+
+    pub fn get_pixels(&self, id: &str) -> Option<&PixelData> {
+        self.pixels.get(id)
+    }
 }

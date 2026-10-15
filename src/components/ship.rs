@@ -20,12 +20,9 @@ pub struct ShipComponent {
 
 #[derive(Clone, serde::Deserialize)]
 pub struct ShipStats {
-
     pub thrust: f32,
     pub torque: f32,
- 
     pub hitbox:SharedShape,
-
     pub size: Vec2,
 }
 
