@@ -287,13 +287,10 @@ impl AsteroidMask {
         Self { size, texel, alpha: vec![0; size * size], dirty: true }
     }
 
-    /// Asteroid-local world position -> texel coordinates (centre = texture centre).
-    /// No y flip: RenderContext::world_to_screen maps world y straight to screen y.
     fn to_texel(&self, p: Vec2) -> Vec2 {
         Vec2::new(p.x, p.y) / self.texel + Vec2::splat(self.size as f32 * 0.5)
     }
 
-    /// Call whenever the collider is rebuilt.
     pub fn rebuild(&mut self, triangles: &[[Vec2; 3]]) {
         self.alpha.fill(0);
         let max = (self.size - 1) as f32;
@@ -301,13 +298,11 @@ impl AsteroidMask {
         for &[a, b, c] in triangles {
             let (a, b, c) = (self.to_texel(a), self.to_texel(b), self.to_texel(c));
 
-            // Bounding box of the triangle in texel space
             let min = a.min(b).min(c).floor().max(Vec2::ZERO);
             let hi = a.max(b).max(c).ceil().min(Vec2::splat(max));
 
             for y in min.y as usize..=hi.y as usize {
                 for x in min.x as usize..=hi.x as usize {
-                    // Sample at the texel centre -> hard, pixel-aligned edges
                     let p = Vec2::new(x as f32 + 0.5, y as f32 + 0.5);
                     if point_in_triangle(p, a, b, c) {
                         self.alpha[y * self.size + x] = 255;
@@ -318,9 +313,6 @@ impl AsteroidMask {
         self.dirty = true;
     }
 
-    /// Combine with the rock texture: rock colour where alpha is set.
-    /// The rock is TILED at native resolution (1 rock pixel = 1 texel),
-    /// never stretched, so pixel size stays constant.
     pub fn to_rgba(&self, rock: &PixelData) -> Vec<u8> {
         let mut out = vec![0u8; self.size * self.size * 4];
         for y in 0..self.size {

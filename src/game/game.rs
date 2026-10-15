@@ -4,6 +4,7 @@ use rapier2d::prelude::*;
 use std::time::Instant;
 
 use sdl2::EventPump;
+use sdl2::ttf::*;
 
 use crate::render_context::RenderContext;
 use crate::rendering::asteroid_textures::AsteroidTextures;
@@ -30,6 +31,7 @@ pub struct Game {
     pub player_id: Option<EntityId>,
     pub ship_database: ShipDatabase,
     pub game_seed: u32,
+    pub fps_text: String,
 }
 
 impl Game {
@@ -62,8 +64,8 @@ impl Game {
         let asteroid_textures = AsteroidTextures::new();
 
         //create ttf_context
-        let ttf_context = sdl2::ttf::init().unwrap();
-
+        let ttf_context: &'static Sdl2TtfContext =
+            Box::leak(Box::new(sdl2::ttf::init().map_err(|e| e.to_string())?));
         let render_context = 
             RenderContext::new(
                 canvas,
@@ -73,8 +75,8 @@ impl Game {
                 screen_width,
                 screen_height,
                 16.0,
-                0.1
-                );
+                0.1,
+            );
 
         //Event pump
         let event_pump = sdl_context.event_pump().unwrap();
@@ -91,6 +93,8 @@ impl Game {
 
         let free_slots = vec![];
 
+        let fps_text = String::new();
+
         Ok(Self {
             render_context,
             physics_world,
@@ -103,15 +107,16 @@ impl Game {
             game_seed,
             slots,
             free_slots,
+            fps_text,
         })
     }
 
     pub fn load_textures(
         &mut self,
     ) -> Result<(), String> {
-
         //texture creator
-        let texture_creator = self.render_context.canvas.texture_creator();
+        let texture_creator =
+            self.render_context.canvas.texture_creator();
 
         self.render_context.assets.load_texture(
             &texture_creator,
@@ -143,6 +148,20 @@ impl Game {
         )?;
 
         Ok(())
+    }
+
+    pub fn load_fonts(
+        &mut self,
+    ) -> Result<(), String> {
+        self.render_context.assets.load_font(
+            &self.render_context.ttf_context,
+            "ui_16",
+            "assets/fonts/CodeNewRomanNerdFontMono-Regular.otf",
+            16,
+            )?;
+
+        Ok(())
+
     }
 
     pub fn load_world(
@@ -177,7 +196,7 @@ impl Game {
             Pose2::new(
                 Vec2::new(20.0, 5.0),
                 0.0),
-            6,
+            7,
             5.0,
             self.game_seed,
             0.4,
@@ -192,10 +211,15 @@ impl Game {
 
         self.load_textures()?;
 
+        self.load_fonts()?;
+
         self.load_world()?;
 
-        //setup for making the loop run at a consistent rate
+        //setup for making the loop run at a consistent rate and fps monitor
         let mut last_frame = Instant::now();
+        let refresh = self.render_context.canvas.window()
+    .display_mode().map(|m| m.refresh_rate).unwrap_or(60);
+let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
 
         while self.running {
             
@@ -225,16 +249,48 @@ impl Game {
 
             self.debug_render()?;
 
-            self.render_context.present();
+            (frames, worst, timer) = self.update_fps(refresh, frames, worst, timer, dt)?;
 
-            for entity in self.entities.iter() {
-                println!("{:?}, ", entity.id);
-            }
-            println!("___________");
+            self.render_context.present();
 
         }
 
         Ok(())
+    }
+
+    pub fn update_fps(
+        &mut self,
+        refresh: i32,
+        mut frames: u32,
+        mut worst: f32,
+        mut timer: f32,
+        dt: f32,
+    ) -> Result<(u32, f32, f32), String> {
+        frames += 1;
+        worst = worst.max(dt);
+        timer += dt;
+
+        if timer >= 1.0 {
+            self.fps_text = format!(
+                "{frames} fps (display {refresh} Hz), worst frame {:.1} ms",
+                worst * 1000.0
+            );
+            frames = 0;
+            worst = 0.0;
+            timer = 0.0;
+        }
+
+        render_text_cached(
+            &mut self.render_context,
+            "fps",
+            "ui_16",
+            &self.fps_text,
+            sdl2::pixels::Color::RGB(50, 255, 50),
+            10.0,
+            10.0,
+        )?;
+
+        Ok((frames, worst, timer))
     }
 
     pub fn handle_input(&mut self) {
@@ -413,6 +469,7 @@ impl Game {
     }
 
     pub fn debug_render(&mut self) -> Result<(), String> {
+
         if !self.debug_mode {
             return Ok(())
         }
@@ -439,7 +496,6 @@ impl Game {
             let s = &mut self.slots[slot as usize];
             s.index = Some(index);
             EntityId { slot, generation: s.generation}
-        //setup for making the loop run at a consistent rate
         } else {
             let slot = self.slots.len() as u32;
             self.slots.push(Slot { generation: 0, index: Some(index)});

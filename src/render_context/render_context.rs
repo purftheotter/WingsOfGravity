@@ -5,14 +5,16 @@ use sdl2::rect::*;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use crate::rendering::{Assets, asteroid_textures};
+use crate::rendering::Assets;
 use crate::rendering::asteroid_textures::AsteroidTextures;
+use crate::rendering::text_cache::TextCache;
 
 pub struct RenderContext {
     pub canvas: Canvas<Window>,
     pub assets: Assets,
     pub asteroid_textures: AsteroidTextures,
-    pub ttf_context: sdl2::ttf::Sdl2TtfContext,
+    pub text_cache: TextCache,
+    pub ttf_context: &'static sdl2::ttf::Sdl2TtfContext,
     pub screen_width: u32,
     pub screen_height: u32,
     pub pixels_per_meter: f32,
@@ -25,7 +27,7 @@ impl RenderContext {
         canvas: Canvas<Window>,
         assets: Assets,
         asteroid_textures: AsteroidTextures,
-        ttf_context: sdl2::ttf::Sdl2TtfContext,
+        ttf_context:&'static sdl2::ttf::Sdl2TtfContext,
         screen_width:u32,
         screen_height:u32,
         pixels_per_meter:f32,
@@ -35,6 +37,7 @@ impl RenderContext {
             canvas,
             assets,
             asteroid_textures,
+            text_cache: TextCache::new(),
             ttf_context,
             screen_width, 
             screen_height, 
