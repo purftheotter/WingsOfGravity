@@ -1,13 +1,15 @@
 use rapier2d::math::*;
 
 use rapier2d::utils::PoseOps;
-use sdl2::rect::*;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
+use sdl2::rect::*;
 
+use crate::core::to_i16;
 use crate::rendering::Assets;
 use crate::rendering::asteroid_textures::AsteroidTextures;
 use crate::rendering::text_cache::TextCache;
+
 
 pub struct RenderContext {
     pub canvas: Canvas<Window>,
@@ -28,11 +30,10 @@ impl RenderContext {
         assets: Assets,
         asteroid_textures: AsteroidTextures,
         ttf_context:&'static sdl2::ttf::Sdl2TtfContext,
-        screen_width:u32,
-        screen_height:u32,
         pixels_per_meter:f32,
         meters_per_texel:f32,
         ) -> Self {
+        let (screen_width, screen_height) = canvas.output_size().unwrap();
         Self { 
             canvas,
             assets,
@@ -44,6 +45,13 @@ impl RenderContext {
             pixels_per_meter,
             meters_per_texel,
             camera_position: Pose2::new(Vec2::ZERO, 0.0)
+        }
+    }
+
+    pub fn update_screen_size(&mut self) {
+        if let Ok((w, h)) = self.canvas.output_size() {
+            self.screen_width = w;
+            self.screen_height = h;
         }
     }
 
@@ -66,6 +74,11 @@ impl RenderContext {
     
     pub fn world_to_screen_rot(&self, world_rot: f32) -> f32 {
         world_rot - self.camera_position.rotation.angle()
+    }
+
+    pub fn world_to_screen_i16(&self, world: Vec2) -> (i16, i16) {
+        let screen = self.world_to_screen(world);
+        (to_i16(screen.x), to_i16(screen.y))
     }
 
     pub fn render_bg(

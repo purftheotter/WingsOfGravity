@@ -41,7 +41,7 @@ pub fn spawn_player(
             weapons: vec![Weapon {
                 weapon_type: weapons::WeaponType::MachineGun,
                 local_offset: Pose2::new(Vec2::ZERO, 0.0),
-                projectile_width: 0.5,
+                projectile_width: 0.2,
                 init_vel_mag: 10.0,
                 explosion_width: None,
                 rpm: 60.0,

@@ -59,14 +59,16 @@ impl Asteroid {
             .map(|(array_pos, vert)| (vert.index, array_pos))
             .collect();
 
+            let hull_collider = build_asteroid_collider(
+                    subdivisions,
+                    &index_map,
+                    &terrain_verts,
+                ).expect("asteroid had not triangles: need subdiv >= 2");
+
             let hull_handle = collider_set.insert_with_parent(
-            build_asteroid_collider(
-                subdivisions,
-                &index_map,
-                &terrain_verts,
-            ).expect("asteroid had not triangles: need subdiv >= 2"),
-            *rigid_body_handle,
-            rigid_body_set
+                hull_collider,
+                *rigid_body_handle,
+                rigid_body_set
             );
 
         let extent = terrain_verts
@@ -175,7 +177,7 @@ impl Asteroid {
             &mut physics_world.island_manager,
             &mut physics_world.rigid_body_set,
             true,
-            );
+        );
 
         self.hull_handle = physics_world.collider_set.insert_with_parent(
                 new_collider,
@@ -188,6 +190,9 @@ impl Asteroid {
             &self.terrain_verts,
         ));
 
+        let rigid_body =
+            physics_world.rigid_body_set.get_mut(rigid_body_handle).unwrap();
+        rigid_body.recompute_mass_properties_from_colliders(&physics_world.collider_set);
 
         true
 
@@ -251,6 +256,7 @@ impl AsteroidVert {
                     BULLET,
                     InteractionTestMode::And,
                 ))
+            .density(0.0)
             .build();
         let sensor_handle = collider_set.insert_with_parent(sensor, *rigid_body_handle, rigid_body_set);
 

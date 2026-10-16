@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-sdl2 = {version = '*', features = ["image","ttf"]}
+sdl2 = {version = '*', features = ["image","ttf","gfx"]}
 rapier2d = { version = "*", features = [ "simd-stable", "serde-serialize"] }
 rand = "*"
 noise = "*"

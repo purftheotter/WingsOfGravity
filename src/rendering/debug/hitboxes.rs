@@ -9,14 +9,15 @@ use crate::rendering::debug::*;
 use crate::physics_world::PhysicsWorld;
 use crate::entity::Entity;
 
+const HITBOX_COLOR:Color = to_gfx(Color::RGB(0, 255, 0));
+const INTACT_COLOR:Color = to_gfx(Color::RGB(0, 255, 255));
+const DESTEROYED_COLOR:Color = to_gfx(Color::RGB(255, 10, 10));
+
 pub fn render_hitbox(
     entity: &Entity,
     physics_world:&PhysicsWorld,
     render_context: &mut RenderContext,
 ) ->Result<(), String> {
-
-    render_context.canvas
-        .set_draw_color(Color::RGB(0, 255, 0));
 
     let entity_rigid_body = 
         physics_world.rigid_body_set
@@ -37,87 +38,90 @@ pub fn render_hitbox(
     }
 
     for collider in entity_colliders {
+        if collider.is_sensor() {continue;}
         let shape = collider.shape();
         
         match shape.as_typed_shape() {
             TypedShape::Ball(ball) => {
                 render_ball(
                     render_context,
-                    entity_rigid_body.position(),
-                    ball
+                    collider.position(),
+                    ball,
+                    HITBOX_COLOR,
                 )?
             }
 
             TypedShape::Triangle(tri) => {
                 render_triangle(
                     render_context,
-                    entity_rigid_body.position(),
+                    collider.position(),
                     tri,
+                    HITBOX_COLOR,
                     )?
             }
 
             TypedShape::ConvexPolygon(polygon) => {
                 render_convex_polygon(
                     render_context,
-                    entity_rigid_body.position(),
-                    polygon
-                    )?
+                    collider.position(),
+                    polygon,
+                    HITBOX_COLOR,
+                )?
             }
 
             TypedShape::Compound(compound) =>{
                 render_compound(
                     render_context,
-                    entity_rigid_body.position(),
+                    collider.position(),
                     compound,
+                    HITBOX_COLOR,
                 )?
             }
 
             _ => {}
             
         }
+    }
 
-        if let Some(asteroid) = entity.asteroid.as_ref() {
+    if let Some(asteroid) = entity.asteroid.as_ref() {
 
-            render_context.canvas
-                .set_draw_color(Color::RGB(0, 255, 0));
+        for vert in asteroid.terrain_verts.iter() {
 
-            for vert in asteroid.terrain_verts.iter() {
+            let vert_color;
 
-                if vert.destroyed {
-                    render_context.canvas
-                        .set_draw_color(Color::RGB(255, 0, 0));
-                }else {
-                    render_context.canvas
-                        .set_draw_color(Color::RGB(0, 255, 0));
-                }
+            if vert.destroyed {
+                vert_color = DESTEROYED_COLOR;
+            }else {
+                continue;
+            }
 
-                if let Some(sensor) = 
-                    physics_world.collider_set
-                        .get(vert.sensor_handle)
-                        .unwrap()
-                        .shape()
-                        .as_ball(){
+            if let Some(sensor) = 
+                physics_world.collider_set
+                    .get(vert.sensor_handle)
+                    .unwrap()
+                    .shape()
+                    .as_ball(){
 
-                    let sensor_pos = 
-                        rotate_pos_around(
-                            entity_rigid_body.position().append_translation(vert.local_transform),
-                            entity_rigid_body.translation(),
-                            *entity_rigid_body.rotation());
-                    
-
-                    render_ball(
-                        render_context,
-                        &sensor_pos,
-                        sensor
-                    )?
-
-                }
+                let sensor_pos = 
+                    rotate_pos_around(
+                        entity_rigid_body.position().append_translation(vert.local_transform),
+                        entity_rigid_body.translation(),
+                        *entity_rigid_body.rotation());
+                
+                render_ball(
+                    render_context,
+                    &sensor_pos,
+                    sensor,
+                    vert_color
+                )?
 
             }
+
         }
     }
 
     Ok(())
+
 }
 
 

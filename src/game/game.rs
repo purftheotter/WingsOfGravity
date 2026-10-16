@@ -38,26 +38,30 @@ impl Game {
     pub fn new() -> Result<Self, String> {
         let physics_world = PhysicsWorld::new(Vec2::ZERO);
 
-        let screen_width = 1366;
-        let screen_height = 768;
-
         //Initilize sdl2
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
+        let screen_width = 1920;
+        let screen_height = 1080;
+
+
         //Create window
         let window = video_subsystem
             .window("WOG", screen_width, screen_height)
-            .fullscreen()
+            .fullscreen_desktop()
             .build()
             .unwrap();
 
         //Create canvas
-        let canvas = window
+        let mut canvas = window
             .into_canvas()
             .present_vsync()
+            .accelerated()
             .build()
             .unwrap();
+
+        canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
 
         let assets = Assets::new();
 
@@ -72,8 +76,6 @@ impl Game {
                 assets,
                 asteroid_textures,
                 ttf_context,
-                screen_width,
-                screen_height,
                 16.0,
                 0.1,
             );
@@ -196,7 +198,7 @@ impl Game {
             Pose2::new(
                 Vec2::new(20.0, 5.0),
                 0.0),
-            7,
+            10,
             5.0,
             self.game_seed,
             0.4,
@@ -215,6 +217,10 @@ impl Game {
 
         self.load_world()?;
 
+        println!("renderer: {}", self.render_context.canvas.info().name);
+
+        self.update_screen_size();
+
         //setup for making the loop run at a consistent rate and fps monitor
         let mut last_frame = Instant::now();
         let refresh = self.render_context.canvas.window()
@@ -228,6 +234,8 @@ let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
             let dt = current_frame.duration_since(last_frame).as_secs_f32();
 
             last_frame = current_frame;
+
+            self.update_screen_size();
 
             self.handle_input();
             self.update_ships();
@@ -253,9 +261,15 @@ let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
 
             self.render_context.present();
 
+            println!("{:?}, {:?}", self.render_context.screen_width, self.render_context.screen_height);
+
         }
 
         Ok(())
+    }
+
+    pub fn update_screen_size(&mut self) {
+        self.render_context.update_screen_size();
     }
 
     pub fn update_fps(

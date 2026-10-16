@@ -1,5 +1,6 @@
 use std::usize;
 use rapier2d::math::*;
+use sdl2::pixels::Color;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PolarIndex {
@@ -39,4 +40,12 @@ pub fn point_in_triangle(p: Vec2, a: Vec2, b: Vec2, c: Vec2) -> bool {
     let w1 = edge(b, c, p);
     let w2 = edge(c, a, p);
     (w0 >= 0.0 && w1 >= 0.0 && w2 >= 0.0) || (w0 <= 0.0 && w1 <= 0.0 && w2 <= 0.0)
+}
+
+pub fn to_i16(v: f32) -> i16 {
+    v.round() as i16
+}
+
+pub const fn to_gfx(color: Color) -> Color {
+    Color::RGBA(color.a, color.b, color.g, color.r)
 }
