@@ -120,7 +120,6 @@ pub fn spawn_asteroid(
     seed: u32,
     noise_strength: f32,
 ) -> Entity {
-    let assets = &render_context.assets;
     let rigid_body = RigidBodyBuilder::dynamic()
         .can_sleep(false)
         .pose(spawn_pos)
@@ -136,7 +135,6 @@ pub fn spawn_asteroid(
         radius,
         seed,
         noise_strength,
-        Sprite::new(assets, "asteroid".to_string()),
         render_context.meters_per_texel,
     );
 

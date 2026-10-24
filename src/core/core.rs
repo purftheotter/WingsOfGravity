@@ -1,4 +1,5 @@
 use std::usize;
+use std::collections::HashMap;
 use rapier2d::math::*;
 use sdl2::pixels::Color;
 
@@ -14,6 +15,13 @@ impl PolarIndex {
             ring,
             point
         }
+    }
+
+    pub fn get_array_pos(
+        self,
+        index_map: &HashMap<PolarIndex, usize>
+    ) -> Option<&usize> {
+        index_map.get(&self)
     }
 }
 

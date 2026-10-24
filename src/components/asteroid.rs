@@ -1,15 +1,11 @@
-use noise::Fbm;
-use noise::NoiseFn;
-use noise::Perlin;
-use rapier2d::dynamics::RigidBodyHandle;
-use rapier2d::dynamics::RigidBodySet;
-use rapier2d::math::*;
+use noise::{Fbm, NoiseFn, Perlin};
+use rapier2d::dynamics::{RigidBodyHandle, RigidBodySet};
 use rapier2d::geometry::*;
+use rapier2d::math::*;
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
-use crate::components::sprite::Sprite;
 use crate::core::*;
 use crate::physics_world::*;
 use crate::rendering::pixel_data::PixelData;
@@ -19,12 +15,10 @@ pub struct Asteroid {
     pub hull_handle: ColliderHandle,
     pub mask: AsteroidMask,
     pub terrain_verts: Vec<AsteroidVert>,
-    pub index_map: HashMap<PolarIndex, usize>,
+    pub tris: Vec<[usize; 3]>,
+    pub intact_tris: Vec<[Vec2; 3]>,
     pub rings: usize,
-    pub sprite: Sprite,
-
 }
-
 
 impl Asteroid {
     pub fn new(
@@ -35,142 +29,113 @@ impl Asteroid {
         radius: f32,
         seed: u32,
         noise_strength: f32,
-        sprite: Sprite,
         texel: f32,
-        ) -> Self {
-
+    ) -> Self {
         let mut noise = Fbm::<Perlin>::new(seed);
         noise.octaves = 4;
         noise.frequency = 0.5;
         noise.lacunarity = 2.0;
         noise.persistence = 0.5;
 
-        let terrain_verts = Asteroid::make_astroid_verts(
+        let terrain_verts = Self::make_asteroid_verts(
             collider_set,
             rigid_body_set,
-            &rigid_body_handle,
-            &subdivisions,
+            rigid_body_handle,
+            subdivisions,
             radius,
             &noise,
             noise_strength,
         );
-        let index_map = terrain_verts.iter()
+
+        let index_map: HashMap<PolarIndex, usize> = terrain_verts
+            .iter()
             .enumerate()
-            .map(|(array_pos, vert)| (vert.index, array_pos))
+            .map(|(pos, vert)| (vert.index, pos))
             .collect();
 
-            let hull_collider = build_asteroid_collider(
-                    subdivisions,
-                    &index_map,
-                    &terrain_verts,
-                ).expect("asteroid had not triangles: need subdiv >= 2");
+        let tris = build_lattice_tris(subdivisions, &index_map);
+        let intact_tris = intact_triangles(&tris, &terrain_verts);
 
-            let hull_handle = collider_set.insert_with_parent(
-                hull_collider,
-                *rigid_body_handle,
-                rigid_body_set
-            );
+        let hull_collider = build_collider(&intact_tris)
+            .expect("asteroid had no triangles: need subdivisions >= 2");
+        let hull_handle =
+            collider_set.insert_with_parent(hull_collider, *rigid_body_handle, rigid_body_set);
 
         let extent = terrain_verts
             .iter()
             .map(|v| v.local_transform.length())
             .fold(0.0_f32, f32::max);
-         
+
         let mut mask = AsteroidMask::new(extent, texel);
-        mask.rebuild(&visible_triangles(subdivisions, &index_map, &terrain_verts));
+        mask.rebuild(&intact_tris);
 
         Self {
             hull_handle,
             mask,
             terrain_verts,
-            index_map,
+            tris,
+            intact_tris,
             rings: subdivisions,
-            sprite,
         }
     }
 
-    pub fn make_astroid_verts(
+    fn make_asteroid_verts(
         collider_set: &mut ColliderSet,
         rigid_body_set: &mut RigidBodySet,
         rigid_body_handle: &RigidBodyHandle,
-        subdivisions: &usize,
-        base_radius:f32,
+        subdivisions: usize,
+        base_radius: f32,
         noise: &Fbm<Perlin>,
         noise_strength: f32,
-    ) -> Vec<AsteroidVert>{
-        let mut verticies:Vec<AsteroidVert> =  vec![];
+    ) -> Vec<AsteroidVert> {
+        let vert_radius = base_radius / subdivisions as f32;
+        let mut verts = Vec::new();
 
-        let subdivisions = *subdivisions;
-
-        let vert_radius =  base_radius / subdivisions as f32;
-
-        let center_index = PolarIndex::new(0, 0);
-        verticies.push(
-            AsteroidVert::new(
+        let mut add = |position: Vec2, index: PolarIndex| {
+            verts.push(AsteroidVert::new(
                 collider_set,
                 rigid_body_set,
                 rigid_body_handle,
-                Vec2::new(0.0, 0.0),
-                center_index,
+                position,
+                index,
                 vert_radius,
-            )
-        );
+            ));
+        };
 
-        for i in 0..subdivisions{
-            let ring_radius =
-                (2.0 * i as f32)
-                * (base_radius / subdivisions as f32);
-            
-            let segments = 6 * i;
+        add(Vec2::ZERO, PolarIndex::new(0, 0));
 
-            for j in 0..segments {
-                
-                let angle = 
-                    (2.0 * PI * j as f32 / segments as f32) 
-                        + (PI * (6.0 * i as f32));
+        for ring in 1..subdivisions {
+            let ring_radius = 2.0 * ring as f32 * vert_radius;
+            let segments = 6 * ring;
 
-                let displacement = Asteroid::radius_displacement(
-                    noise,
-                    angle,
-                    noise_strength
-                );
-
+            for point in 0..segments {
+                let angle = 2.0 * PI * point as f32 / segments as f32;
+                let displacement = Self::radius_displacement(noise, angle, noise_strength);
                 let radius = ring_radius * (1.0 + displacement);
 
-                let local_transform = Vec2::new(
-                    angle.cos() * radius,
-                    angle.sin() * radius
+                add(
+                    Vec2::new(angle.cos() * radius, angle.sin() * radius),
+                    PolarIndex::new(ring, point),
                 );
-
-                let polar_idx = PolarIndex::new(i, j);
-
-                verticies.push(
-                    AsteroidVert::new(
-                        collider_set,
-                        rigid_body_set,
-                        rigid_body_handle,
-                        local_transform,
-                        polar_idx,
-                        vert_radius,
-                    )
-                );
-
             }
         }
 
-        verticies
+        verts
     }
 
-    pub fn build_asteroid_collider(
+    pub fn radius_displacement(noise: &Fbm<Perlin>, angle: f32, wobble_strength: f32) -> f32 {
+        let raw = noise.get([angle.cos() as f64, angle.sin() as f64]);
+        raw as f32 * wobble_strength
+    }
+
+    fn rebuild_collider(
         &mut self,
         rigid_body_handle: RigidBodyHandle,
         physics_world: &mut PhysicsWorld,
     ) -> bool {
- 
-        let Some(new_collider) = 
-            build_asteroid_collider(self.rings, &self.index_map, &self.terrain_verts) else {
-                return false;
-            };
+        let Some(new_collider) = build_collider(&self.intact_tris) else {
+            return false;
+        };
 
         physics_world.collider_set.remove(
             self.hull_handle,
@@ -178,32 +143,18 @@ impl Asteroid {
             &mut physics_world.rigid_body_set,
             true,
         );
-
         self.hull_handle = physics_world.collider_set.insert_with_parent(
-                new_collider,
-                rigid_body_handle,
-                &mut physics_world.rigid_body_set);
+            new_collider,
+            rigid_body_handle,
+            &mut physics_world.rigid_body_set,
+        );
 
-        self.mask.rebuild(&visible_triangles(
-            self.rings,
-            &self.index_map,
-            &self.terrain_verts,
-        ));
+        self.mask.rebuild(&self.intact_tris);
 
-        let rigid_body =
-            physics_world.rigid_body_set.get_mut(rigid_body_handle).unwrap();
-        rigid_body.recompute_mass_properties_from_colliders(&physics_world.collider_set);
-
+        if let Some(body) = physics_world.rigid_body_set.get_mut(rigid_body_handle) {
+            body.recompute_mass_properties_from_colliders(&physics_world.collider_set);
+        }
         true
-
-    }
-
-    pub fn radius_displacement(noise:&Fbm<Perlin>, angle: f32, wobble_strength: f32) -> f32 {
-        let sample_x = angle.cos() as f64;
-        let sample_y = angle.sin() as f64;
-
-        let raw_dis = noise.get([sample_x, sample_y]);
-        raw_dis as f32 * wobble_strength
     }
 
     pub fn update_asteroid(
@@ -211,23 +162,18 @@ impl Asteroid {
         rigid_body_handle: RigidBodyHandle,
         physics_world: &mut PhysicsWorld,
     ) -> bool {
-        let mut verts_changed: bool = false;
+        let mut verts_changed = false;
         for vert in self.terrain_verts.iter_mut() {
-            if vert.update_vert(&physics_world.narrow_phase, &mut physics_world.collider_set) {
-                verts_changed = true;
-            }
-        }
-        
-        if verts_changed{
-            if !self.build_asteroid_collider(
-                rigid_body_handle,
-                physics_world
-            ) {
-                return true;
-            }
+            verts_changed |=
+                vert.update_vert(&physics_world.narrow_phase, &mut physics_world.collider_set);
         }
 
-        false
+        if !verts_changed {
+            return false;
+        }
+
+        self.intact_tris = intact_triangles(&self.tris, &self.terrain_verts);
+        !self.rebuild_collider(rigid_body_handle, physics_world)
     }
 }
 
@@ -247,35 +193,44 @@ impl AsteroidVert {
         local_transform: Vec2,
         index: PolarIndex,
         sensor_radius: f32,
-        ) -> Self{
+    ) -> Self {
         let sensor = ColliderBuilder::ball(sensor_radius)
             .sensor(true)
             .translation(local_transform)
             .collision_groups(InteractionGroups::new(
-                    ASTEROID_VERT,
-                    BULLET,
-                    InteractionTestMode::And,
-                ))
+                ASTEROID_VERT,
+                BULLET,
+                InteractionTestMode::And,
+            ))
             .density(0.0)
             .build();
-        let sensor_handle = collider_set.insert_with_parent(sensor, *rigid_body_handle, rigid_body_set);
+        let sensor_handle =
+            collider_set.insert_with_parent(sensor, *rigid_body_handle, rigid_body_set);
 
-        Self { local_transform, index, sensor_handle, destroyed: false}
+        Self {
+            local_transform,
+            index,
+            sensor_handle,
+            destroyed: false,
+        }
     }
 
-    pub fn update_vert(&mut self, narrow_phase: &NarrowPhase, collider_set: &mut ColliderSet) -> bool{
-        let is_intersecting = narrow_phase
-            .intersection_pairs_with(self.sensor_handle)
-            .any(|(_,_, intersecting)| intersecting);
-
-        if is_intersecting {
-            self.destroyed = true;
-            let collider = collider_set.get_mut(self.sensor_handle).unwrap();
-            collider.set_enabled(false);
-            true
-        }else {
-            false
+    pub fn update_vert(&mut self, narrow_phase: &NarrowPhase, collider_set: &mut ColliderSet) -> bool {
+        if self.destroyed {
+            return false;
         }
+
+        let hit = narrow_phase
+            .intersection_pairs_with(self.sensor_handle)
+            .any(|(_, _, intersecting)| intersecting);
+
+        if hit {
+            self.destroyed = true;
+            if let Some(sensor) = collider_set.get_mut(self.sensor_handle) {
+                sensor.set_enabled(false);
+            }
+        }
+        hit
     }
 }
 
@@ -290,25 +245,30 @@ pub struct AsteroidMask {
 impl AsteroidMask {
     pub fn new(max_extent: f32, texel: f32) -> Self {
         let size = ((2.0 * max_extent) / texel).ceil() as usize + 2;
-        Self { size, texel, alpha: vec![0; size * size], dirty: true }
+        Self {
+            size,
+            texel,
+            alpha: vec![0; size * size],
+            dirty: true,
+        }
     }
 
     fn to_texel(&self, p: Vec2) -> Vec2 {
-        Vec2::new(p.x, p.y) / self.texel + Vec2::splat(self.size as f32 * 0.5)
+        p / self.texel + Vec2::splat(self.size as f32 * 0.5)
     }
 
     pub fn rebuild(&mut self, triangles: &[[Vec2; 3]]) {
         self.alpha.fill(0);
-        let max = (self.size - 1) as f32;
+        let max = Vec2::splat((self.size - 1) as f32);
 
         for &[a, b, c] in triangles {
             let (a, b, c) = (self.to_texel(a), self.to_texel(b), self.to_texel(c));
 
-            let min = a.min(b).min(c).floor().max(Vec2::ZERO);
-            let hi = a.max(b).max(c).ceil().min(Vec2::splat(max));
+            let lo = a.min(b).min(c).floor().max(Vec2::ZERO);
+            let hi = a.max(b).max(c).ceil().min(max);
 
-            for y in min.y as usize..=hi.y as usize {
-                for x in min.x as usize..=hi.x as usize {
+            for y in lo.y as usize..=hi.y as usize {
+                for x in lo.x as usize..=hi.x as usize {
                     let p = Vec2::new(x as f32 + 0.5, y as f32 + 0.5);
                     if point_in_triangle(p, a, b, c) {
                         self.alpha[y * self.size + x] = 255;
@@ -336,61 +296,46 @@ impl AsteroidMask {
     }
 }
 
-pub fn build_asteroid_collider(
-    rings: usize,
-    index_map: &HashMap<PolarIndex, usize>,
-    terrain_verts: &[AsteroidVert],
-) -> Option<Collider> {
-    let shapes = build_triangle_shapes(rings, index_map, terrain_verts);
-    if shapes.is_empty() {
+pub fn build_collider(triangles: &[[Vec2; 3]]) -> Option<Collider> {
+    if triangles.is_empty() {
         return None;
     }
+    let shapes: Vec<(Pose, SharedShape)> = triangles
+        .iter()
+        .map(|&[a, b, c]| (Pose::IDENTITY, SharedShape::triangle(a, b, c)))
+        .collect();
     Some(ColliderBuilder::compound(shapes).restitution(0.2).build())
 }
 
-fn build_triangle_shapes(
-    rings: usize,
-    index_map: &HashMap<PolarIndex, usize>,
-    terrain_verts: &[AsteroidVert],
-) -> Vec<(Pose, SharedShape)> {
-    visible_triangles(rings, index_map, terrain_verts)
-        .into_iter()
-        .map(|[a,b,c]| (Pose::IDENTITY, SharedShape::triangle(a, b, c)))
-        .collect()
-}
-
-pub fn visible_triangles(
-    rings: usize,
-    index_map: &HashMap<PolarIndex, usize>,
-    terrain_verts: &[AsteroidVert],
-) -> Vec<[Vec2; 3]> {
-    let vert = |ring: usize, point: usize| &terrain_verts[index_map[&PolarIndex::new(ring, point)]];
+pub fn build_lattice_tris(rings: usize, index_map: &HashMap<PolarIndex, usize>) -> Vec<[usize; 3]> {
+    let vert = |ring: usize, point: usize| index_map[&PolarIndex::new(ring, point)];
 
     let mut tris = Vec::new();
-    let mut add = |a: &AsteroidVert, b: &AsteroidVert, c: &AsteroidVert| {
-        if a.destroyed || b.destroyed || c.destroyed {
-            return;
-        }
-        tris.push([a.local_transform, b.local_transform, c.local_transform]);
-    };
 
     for r in 1..rings {
-        let outer_ring_n = 6 * r;
-        let inner_ring_n = if r == 1 { 1 } else { 6 * (r - 1) };
+        let outer_n = 6 * r;
+        let inner_n = if r == 1 { 1 } else { 6 * (r - 1) };
 
         for s in 0..6 {
             for k in 0..r {
-                let outer0 = vert(r, (s * r + k) % outer_ring_n);
-                let outer1 = vert(r, (s * r + k + 1) % outer_ring_n);
-                let inner0 = vert(r - 1, (s * (r - 1) + k) % inner_ring_n);
-                add(outer0, outer1, inner0);
+                let outer0 = vert(r, (s * r + k) % outer_n);
+                let outer1 = vert(r, (s * r + k + 1) % outer_n);
+                let inner0 = vert(r - 1, (s * (r - 1) + k) % inner_n);
+                tris.push([outer0, outer1, inner0]);
 
                 if k < r - 1 {
-                    let inner1 = vert(r - 1, (s * (r - 1) + k + 1) % inner_ring_n);
-                    add(inner0, outer1, inner1);
+                    let inner1 = vert(r - 1, (s * (r - 1) + k + 1) % inner_n);
+                    tris.push([inner0, outer1, inner1]);
                 }
             }
         }
     }
     tris
+}
+
+pub fn intact_triangles(tris: &[[usize; 3]], verts: &[AsteroidVert]) -> Vec<[Vec2; 3]> {
+    tris.iter()
+        .filter(|tri| tri.iter().all(|&i| !verts[i].destroyed))
+        .map(|tri| tri.map(|i| verts[i].local_transform))
+        .collect()
 }

@@ -92,7 +92,7 @@ pub fn render_hitbox(
             if vert.destroyed {
                 vert_color = DESTEROYED_COLOR;
             }else {
-                continue;
+                vert_color = INTACT_COLOR;
             }
 
             if let Some(sensor) = 

@@ -45,7 +45,6 @@ impl Game {
         let screen_width = 1920;
         let screen_height = 1080;
 
-
         //Create window
         let window = video_subsystem
             .window("WOG", screen_width, screen_height)
@@ -163,7 +162,6 @@ impl Game {
             )?;
 
         Ok(())
-
     }
 
     pub fn load_world(
@@ -210,7 +208,6 @@ impl Game {
     }
 
     pub fn run(&mut self) -> Result<(), String> {
-
         self.load_textures()?;
 
         self.load_fonts()?;
@@ -224,8 +221,9 @@ impl Game {
         //setup for making the loop run at a consistent rate and fps monitor
         let mut last_frame = Instant::now();
         let refresh = self.render_context.canvas.window()
-    .display_mode().map(|m| m.refresh_rate).unwrap_or(60);
-let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
+            .display_mode().map(|m| m.refresh_rate).unwrap_or(60);
+
+        let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
 
         while self.running {
             
@@ -261,14 +259,14 @@ let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
 
             self.render_context.present();
 
-            println!("{:?}, {:?}", self.render_context.screen_width, self.render_context.screen_height);
-
         }
 
         Ok(())
     }
 
-    pub fn update_screen_size(&mut self) {
+    pub fn update_screen_size(
+        &mut self
+    ) {
         self.render_context.update_screen_size();
     }
 
@@ -483,7 +481,6 @@ let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
     }
 
     pub fn debug_render(&mut self) -> Result<(), String> {
-
         if !self.debug_mode {
             return Ok(())
         }
