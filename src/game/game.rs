@@ -1,18 +1,25 @@
+use std::sync::Arc;
+
+use anyhow::Ok;
+use rapier2d::utils::RotationOps;
+use winit::{
+    event_loop::ActiveEventLoop, keyboard::KeyCode, window::Window
+};
+
 use rand::random;
-use rapier2d::prelude::*;
 
 use std::time::Instant;
 
-use sdl2::EventPump;
-use sdl2::ttf::*;
+use rapier2d::prelude::*;
 
-use crate::render_context::RenderContext;
-use crate::rendering::asteroid_textures::AsteroidTextures;
-use crate::rendering::*;
-use crate::rendering::debug::*;
+use crate::camera::*;
+use crate::sprite_renderer::*;
+use crate::texture::*;
+use crate::gfx::*;
+
+use crate::system_utils::*;
 use crate::physics_world::PhysicsWorld;
 use crate::assets::ShipDatabase;
-use crate::game::input::*;
 use crate::entity::*;
 use crate::systems::ship_movement::*;
 use crate::components::*;
@@ -20,8 +27,11 @@ use crate::core::*;
 
 
 pub struct Game {
-    pub render_context: RenderContext,
-    pub event_pump: EventPump,
+    pub gfx: Gfx,
+    pub camera: CameraGpu,
+    pub sprites: SpriteRenderer,
+    pub texture_ids: TextureIds,
+    pub bg_color: wgpu::Color,
     pub running: bool,
     pub debug_mode: bool,
     pub physics_world: PhysicsWorld,
@@ -31,57 +41,24 @@ pub struct Game {
     pub player_id: Option<EntityId>,
     pub ship_database: ShipDatabase,
     pub game_seed: u32,
-    pub fps_text: String,
+    pub last_frame: Instant,
 }
 
 impl Game {
-    pub fn new() -> Result<Self, String> {
+    pub async fn new(window: Arc<Window>, event_loop: &ActiveEventLoop) -> anyhow::Result<Self> {
+        let gfx = Gfx::new(window, event_loop).await?;
+        let camera = CameraGpu::new(&gfx);
+        let sprites = SpriteRenderer::new(&gfx, &camera);
+
+        let bg_color = wgpu::Color {
+            r: 0.0,
+            g: 0.1,
+            b: 0.2,
+            a: 1.0,
+        };
+
         let physics_world = PhysicsWorld::new(Vec2::ZERO);
-
-        //Initilize sdl2
-        let sdl_context = sdl2::init().unwrap();
-        let video_subsystem = sdl_context.video().unwrap();
-
-        let screen_width = 1920;
-        let screen_height = 1080;
-
-        //Create window
-        let window = video_subsystem
-            .window("WOG", screen_width, screen_height)
-            .fullscreen_desktop()
-            .build()
-            .unwrap();
-
-        //Create canvas
-        let mut canvas = window
-            .into_canvas()
-            .present_vsync()
-            .accelerated()
-            .build()
-            .unwrap();
-
-        canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
-
-        let assets = Assets::new();
-
-        let asteroid_textures = AsteroidTextures::new();
-
-        //create ttf_context
-        let ttf_context: &'static Sdl2TtfContext =
-            Box::leak(Box::new(sdl2::ttf::init().map_err(|e| e.to_string())?));
-        let render_context = 
-            RenderContext::new(
-                canvas,
-                assets,
-                asteroid_textures,
-                ttf_context,
-                16.0,
-                0.1,
-            );
-
-        //Event pump
-        let event_pump = sdl_context.event_pump().unwrap();
-
+ 
         //make ship database
         let ship_database = ShipDatabase::load().expect("Failing while trying to load ShipDatabase");
 
@@ -96,11 +73,19 @@ impl Game {
 
         let fps_text = String::new();
 
-        Ok(Self {
-            render_context,
-            physics_world,
-            event_pump,
+        let texture_ids = TextureIds {
+            fighter: None,
+            green_bullet: None,
+            asteroid: None,
+        };
+
+        let mut game = Self {
+            gfx,
+            camera,
+            sprites,
+            bg_color,
             entities,
+            physics_world,
             running: true,
             debug_mode:false,
             player_id: None,
@@ -108,65 +93,196 @@ impl Game {
             game_seed,
             slots,
             free_slots,
-            fps_text,
-        })
+            texture_ids,
+            last_frame: Instant::now(),
+        };
+
+        game.texture_ids = game.load_textures()?;
+        game.load_world()?;
+
+        Ok(game)
+    }
+
+    pub fn handle_key(
+        &self,
+        event_loop: &ActiveEventLoop,
+        code: KeyCode,
+        is_pressed: bool,
+    ) {
+        match (code, is_pressed) {
+            (KeyCode::Escape, true) => event_loop.exit(),
+            _ => {}
+        }
+    }
+
+    pub fn resize(
+        &mut self,
+        width: u32,
+        height: u32,
+    ){
+        self.gfx.resize(width, height);
+        self.camera.resize(&self.gfx);
+    }
+
+    pub fn tick(&mut self) -> anyhow::Result<()> {
+        let current_frame = Instant::now();
+
+        let dt = current_frame.duration_since(self.last_frame).as_secs_f32();
+
+        self.last_frame = current_frame;
+
+        self.update_ships();
+        self.update_weapons(dt);
+        
+        self.physics_world.step(dt);
+
+        let hits = self.check_projectile_impacts();
+        
+        //self.update_asteroids();
+        
+        self.remove_hit_projectile(hits);
+
+        self.sync_position();
+
+        self.update_camera_pos();
+
+        self.camera.resize(&self.gfx);
+        self.queue_sprites();
+
+        self.render()?;
+
+        //self.debug_render()?;
+
+
+        Ok(())
+    }
+
+    pub fn queue_sprites(&mut self) {
+        for entity in self.entities.iter() {
+            if let Some(ship) = &entity.ship_component {
+                self.sprites.queue_instance(
+                    ship.sprite.to_queued_instance(
+                        entity.position.translation.to_array(),
+                        entity.position.rotation.angle(),
+                    )
+                );
+                continue;
+            }
+            if let Some(projectile) = &entity.projectile {
+                self.sprites.queue_instance(
+                    projectile.sprite.to_queued_instance(
+                        entity.position.translation.to_array(),
+                        entity.position.rotation.angle(),
+                    )
+                );
+            }
+        }
+    }
+
+    pub fn render(&mut self) -> anyhow::Result<()> {
+        self.gfx.window.request_redraw();
+
+        if !self.gfx.is_surface_configured {
+            return Ok(());
+        }
+
+        let output = match self.gfx.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
+            wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
+                surface_texture
+            }
+            wgpu::CurrentSurfaceTexture::Timeout
+            | wgpu::CurrentSurfaceTexture::Occluded
+            | wgpu::CurrentSurfaceTexture::Validation => {
+                return Ok(());
+            }
+
+            wgpu::CurrentSurfaceTexture::Outdated => {
+                self.gfx.surface.configure(&self.gfx.device, &self.gfx.config);
+                return Ok(());
+            }
+            wgpu::CurrentSurfaceTexture::Lost => {
+                anyhow::bail!("Lost device")
+            }
+        };
+        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = self.gfx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Render Encoder"),
+        });
+
+        self.sprites.prepare(&self.gfx);
+        
+        {
+            let mut render_pass = encoder.begin_render_pass(
+                &wgpu::RenderPassDescriptor {
+                    label: Some("Render Pass"),
+                    color_attachments: &[
+                        Some(
+                            wgpu::RenderPassColorAttachment {
+                                view: &view,
+                                resolve_target: None,
+                                depth_slice: None,
+                                ops: wgpu::Operations {
+                                    load: wgpu::LoadOp::Clear(
+                                              self.bg_color
+                                          ),
+                                    store: wgpu::StoreOp::Store,
+                                }
+                            }
+                        )
+                    ],
+                    depth_stencil_attachment: None,
+                    occlusion_query_set: None,
+                    timestamp_writes: None,
+                    multiview_mask: None,
+                }
+            );
+
+            self.sprites.draw(&mut render_pass, &self.camera);
+        }
+
+
+        self.gfx.queue.submit(std::iter::once(encoder.finish()));
+        self.gfx.queue.present(output);
+
+        Ok(())
     }
 
     pub fn load_textures(
         &mut self,
-    ) -> Result<(), String> {
-        //texture creator
-        let texture_creator =
-            self.render_context.canvas.texture_creator();
-
-        self.render_context.assets.load_texture(
-            &texture_creator,
-            "background",
-            "assets/textures/background.png"
-            )?;
-
-        self.render_context.assets.load_texture(
-            &texture_creator,
-            "fighter",
-            "assets/textures/fighter.png"
+    ) -> anyhow::Result<TextureIds> {
+        let bytes = std::fs::read(asset_path("assets/textures/fighter.png"))?;
+        let fighter = self.sprites.load_texture(
+            &self.gfx,
+            &bytes,
+            "fighter"
         )?;
 
-        self.render_context.assets.load_texture(
-            &texture_creator,
-            "green_bullet",
-            "assets/textures/green_bullet.png"
+        let bytes = std::fs::read(asset_path("assets/textures/green_bullet.png"))?;
+        let green_bullet = self.sprites.load_texture(
+            &self.gfx,
+            &bytes,
+            "green_bullet"
         )?;
 
-        self.render_context.assets.load_texture(
-            &texture_creator,
-            "asteroid",
-            "assets/textures/asteroid.png"
+        let bytes = std::fs::read(asset_path("assets/textures/asteroid.png"))?;
+        let asteroid = self.sprites.load_texture(
+            &self.gfx,
+            &bytes,
+            "asteroid"
         )?;
 
-        self.render_context.assets.load_pixels(
-            "asteroid", 
-            "assets/textures/asteroid.png"
-        )?;
-
-        Ok(())
-    }
-
-    pub fn load_fonts(
-        &mut self,
-    ) -> Result<(), String> {
-        self.render_context.assets.load_font(
-            &self.render_context.ttf_context,
-            "ui_16",
-            "assets/fonts/CodeNewRomanNerdFontMono-Regular.otf",
-            16,
-            )?;
-
-        Ok(())
+        Ok(TextureIds { 
+            fighter:Some(fighter),
+            green_bullet: Some(green_bullet),
+            asteroid: Some(asteroid)
+        })
     }
 
     pub fn load_world(
         &mut self,
-        ) -> Result<(), String> {
+        ) -> anyhow::Result<()> {
         
         //spawn_player
         
@@ -179,7 +295,8 @@ impl Game {
                 &self.ship_database,
                 &mut self.physics_world.rigid_body_set,
                 &mut self.physics_world.collider_set,
-                &self.render_context.assets
+                &self.sprites,
+                &self.texture_ids,
             );
 
         self.add_entity(
@@ -187,7 +304,7 @@ impl Game {
             true,
         );
 
-
+        /*
         //spawn_asteroid
         let asteroid = spawn_asteroid(
             &mut self.physics_world.rigid_body_set,
@@ -203,108 +320,11 @@ impl Game {
         );
 
         self.add_entity(asteroid, false);
-
+        */
         Ok(())
     }
 
-    pub fn run(&mut self) -> Result<(), String> {
-        self.load_textures()?;
-
-        self.load_fonts()?;
-
-        self.load_world()?;
-
-        println!("renderer: {}", self.render_context.canvas.info().name);
-
-        self.update_screen_size();
-
-        //setup for making the loop run at a consistent rate and fps monitor
-        let mut last_frame = Instant::now();
-        let refresh = self.render_context.canvas.window()
-            .display_mode().map(|m| m.refresh_rate).unwrap_or(60);
-
-        let (mut frames, mut worst, mut timer) = (0u32, 0.0f32, 0.0f32);
-
-        while self.running {
-            
-            let current_frame = Instant::now();
-
-            let dt = current_frame.duration_since(last_frame).as_secs_f32();
-
-            last_frame = current_frame;
-
-            self.update_screen_size();
-
-            self.handle_input();
-            self.update_ships();
-            self.update_weapons(dt);
-            
-            self.physics_world.step(dt);
-
-            let hits = self.check_projectile_impacts();
-            
-            self.update_asteroids();
-            
-            self.remove_hit_projectile(hits);
-
-            self.sync_position();
-
-            self.update_camra_pos();
-
-            self.render().expect("Render Failed");
-
-            self.debug_render()?;
-
-            (frames, worst, timer) = self.update_fps(refresh, frames, worst, timer, dt)?;
-
-            self.render_context.present();
-
-        }
-
-        Ok(())
-    }
-
-    pub fn update_screen_size(
-        &mut self
-    ) {
-        self.render_context.update_screen_size();
-    }
-
-    pub fn update_fps(
-        &mut self,
-        refresh: i32,
-        mut frames: u32,
-        mut worst: f32,
-        mut timer: f32,
-        dt: f32,
-    ) -> Result<(u32, f32, f32), String> {
-        frames += 1;
-        worst = worst.max(dt);
-        timer += dt;
-
-        if timer >= 1.0 {
-            self.fps_text = format!(
-                "{frames} fps (display {refresh} Hz), worst frame {:.1} ms",
-                worst * 1000.0
-            );
-            frames = 0;
-            worst = 0.0;
-            timer = 0.0;
-        }
-
-        render_text_cached(
-            &mut self.render_context,
-            "fps",
-            "ui_16",
-            &self.fps_text,
-            sdl2::pixels::Color::RGB(50, 255, 50),
-            10.0,
-            10.0,
-        )?;
-
-        Ok((frames, worst, timer))
-    }
-
+    /*
     pub fn handle_input(&mut self) {
         if let Some(index) = self.player_id.and_then(|id| self.index_of(id)) {
             let keyboard_state = self.event_pump.keyboard_state();
@@ -317,6 +337,7 @@ impl Game {
             &mut self.running
         );
     }
+    */
 
     pub fn update_ships(&mut self) {
         for entity in self.entities.iter_mut() {
@@ -331,7 +352,7 @@ impl Game {
             }
         }
     }
-
+    /*
     pub fn update_asteroids(&mut self) {
         let mut entities_to_remove = vec![];
         for entity in self.entities.iter_mut() {
@@ -348,7 +369,7 @@ impl Game {
             self.remove_entity(id);
         }
     }
-
+    */
     pub fn update_weapons(&mut self, dt: f32) {
         let mut new_projectiles: Vec<Entity> = vec![];
 
@@ -369,7 +390,7 @@ impl Game {
                             .unwrap()
                             .linvel();
 
-                        let muzzle_vel = spawn_pos.rotation
+                        let muzzle_vel: Vec2 = spawn_pos.rotation
                             * Vec2::new(0.0, -weapon.init_vel_mag);
 
                         new_projectiles.push(fire_prjectile(
@@ -378,7 +399,8 @@ impl Game {
                             weapon,
                             &mut self.physics_world.rigid_body_set,
                             &mut self.physics_world.collider_set,
-                            &self.render_context.assets,
+                            &self.sprites,
+                            &self.texture_ids,
                         ));
                     }
                 }
@@ -439,7 +461,7 @@ impl Game {
         }
     }
 
-    pub fn update_camra_pos(&mut self) {
+    pub fn update_camera_pos(&mut self) {
         let Some(pos) = self.player_id
             .and_then(|id| self.get_entity(id))
             .map(|e| e.position)
@@ -447,53 +469,7 @@ impl Game {
             return;
         };
 
-        self.render_context.camera_position = pos;
-        self.render_context.camera_position.rotation = Rot2::new(0.0);
-    }
-
-    pub fn render(
-        &mut self,
-        ) -> Result<(), String> {
-        self.render_context.render_bg("background", 1.0, 5.0)?;
-
-        for entity in self.entities.iter_mut() {
-            match entity.entity_type {
-                EntityType::Ship => {
-                    render_ship(
-                        entity,
-                        &mut self.render_context,
-                        &self.ship_database
-                    )?
-                }
-                EntityType::Projectile => {
-                    render_projectile(entity, &mut self.render_context)?
-                }
-                EntityType::Asteroid => {
-                    render_asteroid(
-                        entity,
-                        &mut self.render_context,
-                    )?
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn debug_render(&mut self) -> Result<(), String> {
-        if !self.debug_mode {
-            return Ok(())
-        }
-
-        for entity in self.entities.iter(){
-            render_hitbox(
-                entity,
-                &self.physics_world,
-                &mut self.render_context
-                )?
-        }
-
-        Ok(())  
+        self.camera.camera.center = pos.translation.to_array();
     }
 
     pub fn add_entity(
@@ -546,8 +522,8 @@ impl Game {
         let index = self.index_of(id)?;
         let removed = self.entities.swap_remove(index);
 
-        let key = ((id.slot as u64) << 32) | id.generation as u64;
-        self.render_context.asteroid_textures.remove(key);
+        //let key = ((id.slot as u64) << 32) | id.generation as u64;
+        //self.render_context.asteroid_textures.remove(key);
 
         if index < self.entities.len() {
             let moved = self.entities[index].id;

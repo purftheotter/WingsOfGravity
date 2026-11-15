@@ -1,6 +1,8 @@
 use rapier2d::{geometry::SharedShape, math::Vec2};
 
-use crate::components::{sprite::Sprite, weapons::Weapon};
+use crate::components::weapons::Weapon;
+
+use crate::sprite::Sprite;
 
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, serde::Deserialize)]

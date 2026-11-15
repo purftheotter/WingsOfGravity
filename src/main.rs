@@ -1,20 +1,24 @@
+mod app;
+mod logging;
+mod camera;
+mod gfx;
+mod sprite_renderer;
+mod texture;
+mod sprite;
+mod instance;
+mod vertex;
+
+
 mod components;
 mod entity;
 mod game;
-mod render_context;
 mod physics_world;
-mod rendering;
 mod systems;
 mod assets;
 mod system_utils;
 mod core;
 
-use game::game::Game;
-
-fn main() -> Result<(), String> {
-    let mut game = Game::new()?;
-
-    game.run()?;
-
+fn main() -> anyhow::Result<()>{
+    app::run()?;
     Ok(())
 }

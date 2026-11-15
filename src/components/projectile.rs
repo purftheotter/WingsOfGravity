@@ -1,11 +1,13 @@
+
 use rapier2d::prelude::*;
 
-use crate::components::sprite::Sprite;
-use crate::rendering::Assets;
 use crate::physics_world::*;
 
 use crate::components::weapons::*;
 
+use crate::sprite::Sprite;
+use crate::sprite_renderer::SpriteRenderer;
+use crate::texture::TextureIds;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ProjectileType {
@@ -31,7 +33,8 @@ impl Projectile {
         rigid_body_handle: RigidBodyHandle,
         collider_set: &mut ColliderSet,
         rigid_body_set: &mut RigidBodySet,
-        assets: &Assets,
+        sprite_renderer: &SpriteRenderer,
+        texture_ids: &TextureIds,
         ) -> Self {
 
         let projectile_type = match weapon.weapon_type {
@@ -45,13 +48,34 @@ impl Projectile {
 
         let sprite = match projectile_type {
             ProjectileType::Bullet => {
-                Sprite::new(assets, "green_bullet".to_string())
+                Sprite::new(
+                    texture_ids.green_bullet.unwrap(),
+                    sprite_renderer.texture_size(texture_ids.green_bullet.unwrap()),
+                    [0.0, 0.0, 8.0, 8.0],
+                    [weapon.projectile_width; 2],
+                    [1.0, 1.0, 1.0, 1.0],
+                    2,
+                )
             },
             ProjectileType::Missle => {
-                Sprite::new(assets, "green_bullet".to_string())
+                Sprite::new(
+                    texture_ids.green_bullet.unwrap(),
+                    sprite_renderer.texture_size(texture_ids.green_bullet.unwrap()),
+                    [0.0, 0.0, 8.0, 8.0],
+                    [weapon.projectile_width; 2],
+                    [1.0, 1.0, 1.0, 1.0],
+                    2,
+                )
             },
             ProjectileType::Laser => {
-                Sprite::new(assets, "green_bullet".to_string())
+                Sprite::new(
+                    texture_ids.green_bullet.unwrap(),
+                    sprite_renderer.texture_size(texture_ids.green_bullet.unwrap()),
+                    [0.0, 0.0, 8.0, 8.0],
+                    [weapon.projectile_width; 2],
+                    [1.0, 1.0, 1.0, 1.0],
+                    2,
+                )
             },
         };
 

@@ -4,14 +4,15 @@ use rapier2d::prelude::*;
 use crate::assets::ShipDatabase;
 use crate::components::projectile::Projectile;
 use crate::components::ship::ShipInput;
-use crate::components::sprite::Sprite;
 use crate::components::weapons::Weapon;
 use crate::components::*;
 use crate::entity::*;
-use crate::components::asteroid::*;
+//use crate::components::asteroid::*;
 use crate::physics_world::*;
-use crate::render_context::RenderContext;
-use crate::rendering::Assets;
+
+use crate::sprite_renderer::SpriteRenderer;
+use crate::texture::TextureIds;
+use crate::sprite::*;
 
 pub fn spawn_player(
     spawn_pos:Pose2,
@@ -19,7 +20,8 @@ pub fn spawn_player(
     ship_database: &ShipDatabase,
     rigidbody_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
-    assets: &Assets,
+    sprite_renderer: &SpriteRenderer,
+    texture_ids: &TextureIds,
 ) -> Entity {
     let rigid_body = RigidBodyBuilder::dynamic()
         .translation(spawn_pos.translation)
@@ -27,7 +29,16 @@ pub fn spawn_player(
 
     let rigid_body_handle = rigidbody_set.insert(rigid_body);
 
-    let sprite = Sprite::new(assets, "fighter".to_string());
+    let ship_stats = ship_database.get(class);
+
+    let sprite = Sprite::new(
+        texture_ids.fighter.unwrap(),
+        sprite_renderer.texture_size(texture_ids.fighter.unwrap()),
+        [0.0,0.0, 64.0, 64.0],
+        ship_stats.size.to_array(),
+        [1.0, 1.0, 1.0, 1.0],
+        1,
+    );
 
     let player_entity = Entity {
         id: EntityId::PLACEHOLDER,
@@ -50,11 +61,8 @@ pub fn spawn_player(
             }]
         }),
         projectile: None,
-        asteroid: None
-
+        //asteroid: None
     };
-
-    let ship_stats = ship_database.get(class);
 
     let collider = 
         ColliderBuilder::new(
@@ -77,7 +85,8 @@ pub fn fire_prjectile(
     weapon: &Weapon,
     rigidbody_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
-    assets: &Assets,
+    sprite_renderer: &SpriteRenderer,
+    texture_ids: &TextureIds,
 ) -> Entity {
     let rigid_body = RigidBodyBuilder::dynamic()
         .pose(spawn_pos)
@@ -93,7 +102,8 @@ pub fn fire_prjectile(
         rigid_body_handle,
         collider_set, 
         rigidbody_set,
-        assets,
+        sprite_renderer,
+        texture_ids,
     ));
 
     let entity = Entity {
@@ -103,13 +113,13 @@ pub fn fire_prjectile(
         entity_type: EntityType::Projectile,
         ship_component: None,
         projectile,
-        asteroid: None
+        //asteroid: None
 
     };
 
     entity
 }
-
+/*
 pub fn spawn_asteroid(
     rigid_body_set: &mut RigidBodySet,
     collider_set: &mut ColliderSet,
@@ -150,5 +160,4 @@ pub fn spawn_asteroid(
 
     entity
 }
-
-
+*/

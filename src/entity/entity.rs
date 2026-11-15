@@ -1,7 +1,7 @@
 use rapier2d::dynamics::RigidBodyHandle;
 use rapier2d::math::Pose2;
 
-use crate::components::asteroid::Asteroid;
+//use crate::components::asteroid::Asteroid;
 use crate::components::ship::ShipComponent;
 use crate::components::projectile::Projectile;
 
@@ -37,7 +37,7 @@ pub struct Entity {
 
     pub ship_component: Option<ShipComponent>,
 
-    pub asteroid: Option<Asteroid>,
+    //pub asteroid: Option<Asteroid>,
 
     pub projectile: Option<Projectile>,
 
